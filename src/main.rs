@@ -52,7 +52,7 @@ fn determine_collapse(arg_collapse: bool) -> bool {
 fn main() -> Result<()> {
     let args = Args::parse();
     let indent = determine_indent(args.indent);
-    // let collapse = determine_collapse(args.collapse); // TODO: pass to render/build if needed
+    let collapse = determine_collapse(args.collapse);
 
     // Run git status --porcelain
     let output = Command::new("git")
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
     }
 
     let result_node = parser::build_tree(lines)?;
-    print!("{}", result_node.render_tree(indent));
+    print!("{}", result_node.render_tree(indent, collapse));
 
     Ok(())
 }
