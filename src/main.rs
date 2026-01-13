@@ -35,7 +35,7 @@ fn determine_indent(arg_indent: Option<usize>) -> usize {
     let indent = arg_indent.or_else(|| {
         get_git_config("status-tree.indent")
             .and_then(|s| s.parse().ok())
-    }).unwrap_or(4);
+    }).unwrap_or(3);
     
     indent.clamp(2, 10)
 }
