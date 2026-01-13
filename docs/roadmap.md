@@ -7,6 +7,7 @@ Focus: Providing immediate context to the user before they commit.
     - Display current branch name.
     - Show ahead/behind counts (`⬆️ 2 ⬇️ 0`).
     - Show upstream branch status.
+    - *Note: Make fancy icons (⎇) optional for font compatibility.*
 - [ ] **Smart Filtering**
     - `--staged-only`: View only files ready to commit.
     - `--modified-only`: Hide untracked files to reduce noise.
