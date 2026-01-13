@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 
 #[derive(Debug, Clone)]
 pub enum NodeType {
-    File { status: String },
+    File { status: String, stats: Option<(usize, usize)> },
     Directory { children: Vec<Node> },
 }
 
@@ -14,10 +14,10 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new_file(name: String, status: String) -> Self {
+    pub fn new_file(name: String, status: String, stats: Option<(usize, usize)>) -> Self {
         Node {
             name,
-            node_type: NodeType::File { status },
+            node_type: NodeType::File { status, stats },
         }
     }
 
@@ -28,6 +28,8 @@ impl Node {
             node_type: NodeType::Directory { children },
         }
     }
+
+    // ... is_dir, is_file, cmp omitted (unchanged) ...
 
     pub fn is_dir(&self) -> bool {
         matches!(self.node_type, NodeType::Directory { .. })
@@ -50,15 +52,43 @@ impl Node {
     fn format_name(&self) -> String {
         match &self.node_type {
             NodeType::Directory { .. } => self.name.bold().to_string(),
-            NodeType::File { status } => {
+            NodeType::File { status, stats } => {
                 let staged = status.contains('+');
                 let color_name = if staged {
                     self.name.green()
                 } else {
                     self.name.red()
                 };
-                // Example: name (M)
-                format!("{} ({})", color_name, status)
+                
+                let mut s = format!("{} ({})", color_name, status);
+                
+                if let Some((added, deleted)) = stats {
+                    let total = added + deleted;
+                    if total > 0 {
+                        // Visual bar logic
+                        // Example: | 5 +++--
+                        // Scale? If total is huge, we cap the bar length?
+                        // Let's assume max bar width of 5-10 chars.
+                        let max_width = 10;
+                        
+                        // Calculate ratio of + to -
+                        // If total > max, we scale down.
+                        // f64 ops might be overkill but safest.
+                        
+                        let (plus_chars, minus_chars) = if total <= max_width {
+                            (*added, *deleted)
+                        } else {
+                            let ratio = *added as f64 / total as f64;
+                            let p = (ratio * max_width as f64).round() as usize;
+                            let m = max_width - p;
+                            (p, m)
+                        };
+                        
+                        let bar = format!("{}{}", "+".repeat(plus_chars).green(), "-".repeat(minus_chars).red());
+                        s.push_str(&format!(" | {} {}", total, bar));
+                    }
+                }
+                s
             }
         }
     }

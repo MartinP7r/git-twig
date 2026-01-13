@@ -7,6 +7,7 @@ struct BuilderNode {
     name: String,
     children: HashMap<String, BuilderNode>,
     file_status: Option<String>,
+    stats: Option<(usize, usize)>,
 }
 
 pub fn parse_status_line(line: &str) -> Option<(String, String)> {
@@ -29,11 +30,15 @@ pub fn parse_status_line(line: &str) -> Option<(String, String)> {
     Some((rest.to_string(), status))
 }
 
-pub fn build_tree(lines: Vec<String>) -> Result<Node> {
+pub fn build_tree(
+    lines: Vec<String>, 
+    stats: &HashMap<String, (usize, usize)>
+) -> Result<Node> {
     let mut root = BuilderNode {
         name: ".".to_string(),
         children: HashMap::new(),
         file_status: None,
+        stats: None,
     };
     
     for line in lines {
@@ -64,11 +69,41 @@ pub fn build_tree(lines: Vec<String>) -> Result<Node> {
                     
                     (old.to_string(), name)
                 } else {
-                    (path_str.clone(), path_str)
+                    (path_str.clone(), path_str.clone())
                 }
             } else {
                 (path_str.clone(), std::path::Path::new(&path_str).file_name().unwrap_or_default().to_string_lossy().to_string())
             };
+            
+            // Look up stats for the *full path* (which is effective_path generally, or keys in stats map)
+            // Note: if rename, stats map is keyed by which path?
+            // `git diff --numstat` shows "old => new" or just "new"?
+            // git status --porcelain shows "old -> new".
+            // git diff usually uses post-image name for working tree?
+            // If I modify 'a', it shows 'a'.
+            // If I renamed 'a' -> 'b', and modified 'b', `git diff` shows 'b'.
+            // If I renamed 'a' -> 'b' (staged), and modified 'b' (unstaged).
+            // `stats` collection logic:
+            // "path" = "b".
+            // `effective_path` logic uses "a" (old path) as the location in tree if we used `old` in rename block above.
+            // In the rename block above: `(old.to_string(), name)`.
+            // So we are inserting into `old` path location.
+            // But stats might be keyed by `new` path?
+            // Let's check keys in stats map. 
+            // If I key by `path_str` (raw from porcelain e.g. "old -> new"), I won't match "new".
+            // I should try to lookup both or use fuzzy logic?
+            // Simplest: lookup `effective_path`. If it's a rename, effective_path is `old`.
+            // But diff stats will likely list `new`.
+            
+            // Let's extract `new` path from rename string if needed.
+            let lookup_path = if status.contains('R') && path_str.contains(" -> ") {
+                 let parts: Vec<&str> = path_str.split(" -> ").collect();
+                 if parts.len() == 2 { parts[1] } else { &path_str }
+            } else {
+                 &path_str
+            };
+            
+            let file_stats = stats.get(lookup_path).cloned();
             
             // Insert into tree
             // "a/b/c.txt" -> traverse "a", "b", insert "c.txt"
@@ -83,6 +118,7 @@ pub fn build_tree(lines: Vec<String>) -> Result<Node> {
                     name: part.clone(),
                     children: HashMap::new(),
                     file_status: None,
+                    stats: None,
                 });
             }
             
@@ -91,6 +127,7 @@ pub fn build_tree(lines: Vec<String>) -> Result<Node> {
                 name: display_name,
                 children: HashMap::new(),
                 file_status: Some(status),
+                stats: file_stats,
             };
             
             current.children.insert(leaf.name.clone(), leaf);
@@ -102,7 +139,7 @@ pub fn build_tree(lines: Vec<String>) -> Result<Node> {
 
 fn convert_builder(builder: BuilderNode) -> Node {
     if let Some(status) = builder.file_status {
-        Node::new_file(builder.name, status)
+        Node::new_file(builder.name, status, builder.stats)
     } else {
         // Directory
         let children: Vec<Node> = builder.children.into_values().map(convert_builder).collect();
