@@ -15,6 +15,7 @@ Focus: Providing immediate context to the user before they commit.
 ## Q2 - The "Workflow" Release (v1.0.0)
 Focus: Transforming the tool from a viewer into an actionable workflow step.
 
+- [ ] **CI Automation**: GitHub Action to run `cargo test` on every PR (separate from release).
 - [ ] **Interactive Mode (TUI)**
     - Navigate the tree with arrow keys.
     - Toggle staging (`git add`) with `<Space>`.
