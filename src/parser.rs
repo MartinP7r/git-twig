@@ -19,7 +19,7 @@ pub fn parse_status_line(line: &str) -> Option<(String, String)> {
     let y = line.chars().nth(1)?;
     let rest = &line[3..];
 
-    // Determine status string like Ruby version
+    // Determine status string
     let status = if y == ' ' {
         format!("{}+", x)
     } else {

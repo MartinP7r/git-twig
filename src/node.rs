@@ -97,7 +97,7 @@ impl Node {
         let mut out = String::new();
         // Root is usually "." 
         // If we are root, we don't collapse ourselves generally (unless we are just a wrapper?). 
-        // The Ruby version behaves slightly differently for root.
+        // Logic for root node behavior
         // Let's assume root is never collapsed.
         
         out.push_str(&format!("{}\n", self.format_name()));
