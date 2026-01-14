@@ -33,7 +33,7 @@ fn get_git_config(key: &str) -> Option<String> {
 
 fn determine_indent(arg_indent: Option<usize>) -> usize {
     let indent = arg_indent.or_else(|| {
-        get_git_config("status-tree.indent")
+        get_git_config("twig.indent")
             .and_then(|s| s.parse().ok())
     }).unwrap_or(3);
     
@@ -44,7 +44,7 @@ fn determine_collapse(arg_collapse: bool) -> bool {
     if arg_collapse {
         return true;
     }
-    get_git_config("status-tree.collapse")
+    get_git_config("twig.collapse")
         .map(|s| s == "true")
         .unwrap_or(false)
 }
