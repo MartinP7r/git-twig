@@ -10,21 +10,24 @@ pub enum NodeType {
 #[derive(Debug, Clone)]
 pub struct Node {
     pub name: String,
+    pub full_path: String,
     pub node_type: NodeType,
 }
 
 impl Node {
-    pub fn new_file(name: String, status: String, stats: Option<(usize, usize)>) -> Self {
+    pub fn new_file(name: String, full_path: String, status: String, stats: Option<(usize, usize)>) -> Self {
         Node {
             name,
+            full_path,
             node_type: NodeType::File { status, stats },
         }
     }
 
-    pub fn new_dir(name: String, mut children: Vec<Node>) -> Self {
+    pub fn new_dir(name: String, full_path: String, mut children: Vec<Node>) -> Self {
         children.sort_by(|a, b| a.cmp(b));
         Node {
             name,
+            full_path,
             node_type: NodeType::Directory { children },
         }
     }
@@ -179,6 +182,7 @@ impl Node {
                     // Create new combined node
                     let combined = Node {
                         name: new_name,
+                        full_path: self.full_path.clone(),
                         node_type: child_collapsed.node_type.clone(),
                     };
                     return (combined, None);
@@ -188,4 +192,111 @@ impl Node {
         
         (self.clone(), None)
     }
+
+    pub fn flatten(&self, indent_size: usize, collapse: bool) -> Vec<FlatNode> {
+        let mut flattened = Vec::new();
+        // Add root
+        flattened.push(FlatNode {
+            name: self.name.clone(),
+            full_path: self.full_path.clone(),
+            indent: 0,
+            is_dir: self.is_dir(),
+            status: self.get_status_char(),
+            raw_status: self.get_raw_status(),
+            connector: String::new(),
+        });
+
+        if let NodeType::Directory { children } = &self.node_type {
+            self.flatten_children(children, indent_size, collapse, "", &mut flattened);
+        }
+        flattened
+    }
+
+    fn flatten_children(
+        &self,
+        children: &[Node],
+        indent_size: usize,
+        collapse: bool,
+        prefix: &str,
+        out: &mut Vec<FlatNode>,
+    ) {
+        let count = children.len();
+        for (i, child) in children.iter().enumerate() {
+            let is_last = i == count - 1;
+
+            let (display_node, _) = if collapse {
+                child.get_collapsed_view()
+            } else {
+                (child.clone(), None)
+            };
+
+            let children_to_render = match &display_node.node_type {
+                NodeType::Directory { children } => Some(children),
+                _ => None,
+            };
+
+            // Prepare the connector
+            let connector_symbol = if is_last { "└" } else { "├" };
+            let dashes = "─".repeat(indent_size - 2);
+            let full_connector = format!("{}{}{} ", prefix, connector_symbol, dashes);
+
+            out.push(FlatNode {
+                name: display_node.get_display_name_clean(),
+                full_path: display_node.full_path.clone(),
+                indent: 0, // Not strictly needed if we have full_connector
+                is_dir: display_node.is_dir(),
+                status: display_node.get_status_char(),
+                raw_status: display_node.get_raw_status(),
+                connector: full_connector,
+            });
+
+            if let Some(recurs_children) = children_to_render {
+                let extension = if is_last { " " } else { "│" };
+                let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent_size - 1));
+                self.flatten_children(recurs_children, indent_size, collapse, &new_prefix, out);
+            }
+        }
+    }
+
+    pub fn get_display_name_clean(&self) -> String {
+        match &self.node_type {
+            NodeType::Directory { .. } => self.name.clone(),
+            NodeType::File { status, .. } => {
+                format!("{} ({})", self.name, status)
+            }
+        }
+    }
+
+    pub fn get_status_char(&self) -> char {
+        match &self.node_type {
+            NodeType::File { status, .. } => {
+                if status.contains('+') {
+                    '+'
+                } else if status.contains('?') {
+                    '?'
+                } else {
+                    'M' // Default to Modified if not staged
+                }
+            }
+            NodeType::Directory { .. } => ' ',
+        }
+    }
+
+    pub fn get_raw_status(&self) -> String {
+        match &self.node_type {
+            NodeType::File { status, .. } => status.clone(),
+            NodeType::Directory { .. } => String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FlatNode {
+    pub name: String,
+    pub full_path: String,
+    pub indent: usize,
+    pub is_dir: bool,
+    pub status: char,
+    pub raw_status: String,
+    pub connector: String,
 }

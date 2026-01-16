@@ -5,6 +5,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 struct BuilderNode {
     name: String,
+    full_path: String,
     children: HashMap<String, BuilderNode>,
     file_status: Option<String>,
     stats: Option<(usize, usize)>,
@@ -36,6 +37,7 @@ pub fn build_tree(
 ) -> Result<Node> {
     let mut root = BuilderNode {
         name: ".".to_string(),
+        full_path: ".".to_string(),
         children: HashMap::new(),
         file_status: None,
         stats: None,
@@ -111,11 +113,18 @@ pub fn build_tree(
             let components: Vec<_> = path.components().map(|c| c.as_os_str().to_string_lossy().to_string()).collect();
             
             let mut current = &mut root;
+            let mut current_path = String::new();
             
             // Navigate directories
             for part in &components[..components.len() - 1] {
+                if !current_path.is_empty() {
+                    current_path.push('/');
+                }
+                current_path.push_str(part);
+
                 current = current.children.entry(part.clone()).or_insert_with(|| BuilderNode {
                     name: part.clone(),
+                    full_path: current_path.clone(),
                     children: HashMap::new(),
                     file_status: None,
                     stats: None,
@@ -125,6 +134,7 @@ pub fn build_tree(
             // Insert leaf
             let leaf = BuilderNode {
                 name: display_name,
+                full_path: effective_path, // This is the full original path
                 children: HashMap::new(),
                 file_status: Some(status),
                 stats: file_stats,
@@ -139,10 +149,10 @@ pub fn build_tree(
 
 fn convert_builder(builder: BuilderNode) -> Node {
     if let Some(status) = builder.file_status {
-        Node::new_file(builder.name, status, builder.stats)
+        Node::new_file(builder.name, builder.full_path, status, builder.stats)
     } else {
         // Directory
         let children: Vec<Node> = builder.children.into_values().map(convert_builder).collect();
-        Node::new_dir(builder.name, children)
+        Node::new_dir(builder.name, builder.full_path, children)
     }
 }

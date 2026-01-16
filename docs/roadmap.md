@@ -17,8 +17,8 @@ Focus: Transforming the tool from a viewer into an actionable workflow step.
 
 - [ ] **CI Automation**: GitHub Action to run `cargo test` on every PR (separate from release).
 - [ ] **Interactive Mode (TUI)**
-    - Navigate the tree with arrow keys.
-    - Toggle staging (`git add`) with `<Space>`.
+    - Navigate the tree with arrow keys or **Vim bindings** (`h`, `j`, `k`, `l`).
+    - Toggle staging (`git add`/`reset`) for **files and whole folders** with `<Space>`.
     - View diffs inline with `<Enter>`.
 - [ ] **Editor Integration**
     - Flag `--open` (or `-o`) to open all modified files in `$EDITOR`.

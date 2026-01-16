@@ -4,6 +4,7 @@ use std::process::Command;
 
 mod node;
 mod parser;
+mod interactive;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -15,6 +16,10 @@ struct Args {
     /// Collapse directories containing only another directory
     #[arg(short, long)]
     collapse: bool,
+
+    /// Start interactive mode
+    #[arg(short = 'I', long)]
+    interactive: bool,
 }
 
 fn get_git_config(key: &str) -> Option<String> {
@@ -54,6 +59,25 @@ fn main() -> Result<()> {
     let indent = determine_indent(args.indent);
     let collapse = determine_collapse(args.collapse);
 
+    if args.interactive {
+        return interactive::run(indent, collapse);
+    }
+
+    let result_node = match build_tree_from_git() {
+        Ok(Some(node)) => node,
+        Ok(None) => {
+            println!("(working directory clean)");
+            return Ok(());
+        }
+        Err(e) => return Err(e),
+    };
+
+    print!("{}", result_node.render_tree(indent, collapse));
+
+    Ok(())
+}
+
+pub fn build_tree_from_git() -> Result<Option<node::Node>> {
     // Run git status --porcelain
     let status_output = Command::new("git")
         .args(["status", "--porcelain"])
@@ -61,28 +85,24 @@ fn main() -> Result<()> {
         .context("Failed to execute git status")?;
 
     if !status_output.status.success() {
-        eprint!("{}", String::from_utf8_lossy(&status_output.stderr));
-        std::process::exit(status_output.status.code().unwrap_or(1));
+        let err = String::from_utf8_lossy(&status_output.stderr);
+        return Err(anyhow::anyhow!("Git status failed: {}", err));
     }
 
     let status_stdout = String::from_utf8_lossy(&status_output.stdout);
     let lines: Vec<String> = status_stdout.lines().map(|s| s.to_string()).collect();
 
     if lines.is_empty() {
-        println!("(working directory clean)");
-        return Ok(());
+        return Ok(None);
     }
 
     // Collect diff stats
-    // We need both unstaged and staged stats
     let mut stats = std::collections::HashMap::new();
     collect_diff_stats(&mut stats, &["diff", "--numstat"])?;
     collect_diff_stats(&mut stats, &["diff", "--cached", "--numstat"])?;
 
     let result_node = parser::build_tree(lines, &stats)?;
-    print!("{}", result_node.render_tree(indent, collapse));
-
-    Ok(())
+    Ok(Some(result_node))
 }
 
 fn collect_diff_stats(
