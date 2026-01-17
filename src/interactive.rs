@@ -506,7 +506,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                             }
                             KeyCode::Tab => {
                                 if app.layout == AppLayout::Split {
-                                    app.toggle_focus();
+                                    let _ = app.toggle_focus();
                                 }
                             }
                             KeyCode::Enter => {

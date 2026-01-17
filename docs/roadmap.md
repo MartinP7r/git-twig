@@ -43,5 +43,6 @@ Focus: Making the tool look modern and customizable ("git-twig").
 - [ ] **Configurable Themes**: Allow user-defined colors/icons via `git config`.
 - [ ] **Jason/YAML Output**: For machine parsing/integration with other tools.
 - [x] **Split View**: Option to show staged and unstaged files in vertically separate sections (Toggle with `v`).
-- [ ] **Fuzzy Search**: Filter file list in interactive mode with `/`.
+- [x] **Fuzzy Search**: Filter file list in interactive mode with `/`.
 - [ ] **File Jump**: Jump between files (skipping directories) with `d`/`u`.
+- [ ] **Homebrew Formula**: Publish to Homebrew using `cargo-binstall`.
