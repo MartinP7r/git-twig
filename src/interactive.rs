@@ -107,7 +107,7 @@ impl App {
             FilterMode::Staged => (true, false),
         };
 
-        let tree = build_tree_from_git(staged, modified, false)?;
+        let tree = build_tree_from_git(staged, modified, false, false)?;
         if let Some(root) = tree {
             self.nodes = root.flatten(self.indent_size, self.collapse);
             
@@ -238,35 +238,28 @@ impl App {
         self.state.select(Some(i));
     }
 
-    fn stage(&mut self) -> Result<()> {
+    fn toggle_stage(&mut self) -> Result<()> {
         if let Some(i) = self.state.selected() {
             if let Some(node) = self.nodes.get(i) {
-                // Skip if already staged removed (D+)
-                if node.raw_status == "D+" {
-                    return Ok(());
-                }
-
-                let status = Command::new("git")
-                    .args(["add", &node.full_path])
-                    .status()?;
-                if status.success() {
-                    self.refresh()?;
-                }
-            }
-        }
-        Ok(())
-    }
-
-    fn unstage(&mut self) -> Result<()> {
-        if let Some(i) = self.state.selected() {
-            if let Some(node) = self.nodes.get(i) {
-                // For unstaging, we use reset for files or restore --staged
-                // restore --staged is modern
-                let status = Command::new("git")
-                    .args(["restore", "--staged", &node.full_path])
-                    .status()?;
-                if status.success() {
-                    self.refresh()?;
+                if node.raw_status.contains('+') {
+                     // Unstage
+                    let status = Command::new("git")
+                        .args(["restore", "--staged", &node.full_path])
+                        .status()?;
+                    if status.success() {
+                        self.refresh()?;
+                    }
+                } else {
+                    // Stage (add)
+                    // Skip if already staged removed (D+) - handled by contains(+) check above actually? 
+                    // D+ contains +, so it goes to unstage block. git restore --staged works for D+.
+                    
+                    let status = Command::new("git")
+                        .args(["add", &node.full_path])
+                        .status()?;
+                    if status.success() {
+                        self.refresh()?;
+                    }
                 }
             }
         }
@@ -285,11 +278,8 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                         KeyCode::Char('q') => return Ok(()),
                         KeyCode::Char('j') | KeyCode::Down => app.next(),
                         KeyCode::Char('k') | KeyCode::Up => app.previous(),
-                        KeyCode::Char('s') | KeyCode::Char(' ') => {
-                            let _ = app.stage();
-                        }
-                        KeyCode::Char('u') => {
-                            let _ = app.unstage();
+                        KeyCode::Char(' ') => {
+                            let _ = app.toggle_stage();
                         }
                         KeyCode::Char('f') => {
                             let _ = app.toggle_filter();

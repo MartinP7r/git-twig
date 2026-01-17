@@ -38,6 +38,7 @@ pub fn build_tree(
     stats: &HashMap<String, (usize, usize)>,
     staged_only: bool,
     modified_only: bool,
+    untracked_only: bool,
 ) -> Result<Node> {
     let mut root = BuilderNode {
         name: ".".to_string(),
@@ -56,6 +57,10 @@ pub fn build_tree(
             // "modified_only" means hide untracked (??)
             // status for untracked is "??"
             if modified_only && status == "??" {
+                continue;
+            }
+            // "untracked_only" means hide everything except untracked (??)
+            if untracked_only && status != "??" {
                 continue;
             }
 
@@ -263,7 +268,7 @@ mod tests {
         let stats = HashMap::new();
         
         // Filter staged only
-        let node = build_tree(lines.clone(), &stats, true, false).unwrap();
+        let node = build_tree(lines.clone(), &stats, true, false, false).unwrap();
         // Should only contain staged.txt
         if let NodeType::Directory { children } = node.node_type {
             assert_eq!(children.len(), 1);
@@ -273,7 +278,7 @@ mod tests {
         }
         
         // No filter
-        let node = build_tree(lines, &stats, false, false).unwrap();
+        let node = build_tree(lines, &stats, false, false, false).unwrap();
         if let NodeType::Directory { children } = node.node_type {
             assert_eq!(children.len(), 2);
         } else {
@@ -290,7 +295,7 @@ mod tests {
         let stats = HashMap::new();
         
         // Filter modified only (hide untracked)
-        let node = build_tree(lines.clone(), &stats, false, true).unwrap();
+        let node = build_tree(lines.clone(), &stats, false, true, false).unwrap();
         
         if let NodeType::Directory { children } = node.node_type {
             assert_eq!(children.len(), 1);
@@ -298,11 +303,22 @@ mod tests {
         } else {
             panic!("Root should be a directory");
         }
+    }
+
+    #[test]
+    fn test_build_tree_filtering_untracked() {
+        let lines = vec![
+            "?? untracked.txt".to_string(),
+            " M modified.txt".to_string(),
+        ];
+        let stats = HashMap::new();
         
-        // No filter
-        let node = build_tree(lines, &stats, false, false).unwrap();
+        // Filter untracked only
+        let node = build_tree(lines.clone(), &stats, false, false, true).unwrap();
+        
         if let NodeType::Directory { children } = node.node_type {
-            assert_eq!(children.len(), 2);
+            assert_eq!(children.len(), 1);
+            assert!(children.iter().any(|c| c.name == "untracked.txt"));
         } else {
             panic!("Root should be a directory");
         }
