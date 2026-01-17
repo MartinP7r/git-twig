@@ -117,7 +117,9 @@ impl App {
         if let Some(root) = tree {
             self.nodes = root.flatten(self.indent_size, self.collapse, &self.theme);
 
-            self.max_name_width = self.nodes.iter()
+            self.max_name_width = self
+                .nodes
+                .iter()
                 .map(|n| n.connector.chars().count() + n.name.chars().count())
                 .max()
                 .unwrap_or(0);
@@ -379,21 +381,27 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
             if let Some((added, deleted)) = node.stats {
                 let total = added + deleted;
                 if total > 0 {
-                   spans.push(ratatui::text::Span::raw(format!("{}{}", padding, " | ")));
-                   spans.push(ratatui::text::Span::raw(format!("{} ", total)));
-                   
-                   let max_bar_width = 10;
-                   let (plus_chars, minus_chars) = if total <= max_bar_width {
-                       (added, deleted)
-                   } else {
-                       let ratio = added as f64 / total as f64;
-                       let p = (ratio * max_bar_width as f64).round() as usize;
-                       let m = max_bar_width - p;
-                       (p, m)
-                   };
-                   
-                   spans.push(ratatui::text::Span::styled(theme.diff_bar_plus.to_string().repeat(plus_chars), Style::default().fg(Color::Green)));
-                   spans.push(ratatui::text::Span::styled(theme.diff_bar_minus.to_string().repeat(minus_chars), Style::default().fg(Color::Red)));
+                    spans.push(ratatui::text::Span::raw(format!("{}{}", padding, " | ")));
+                    spans.push(ratatui::text::Span::raw(format!("{} ", total)));
+
+                    let max_bar_width = 10;
+                    let (plus_chars, minus_chars) = if total <= max_bar_width {
+                        (added, deleted)
+                    } else {
+                        let ratio = added as f64 / total as f64;
+                        let p = (ratio * max_bar_width as f64).round() as usize;
+                        let m = max_bar_width - p;
+                        (p, m)
+                    };
+
+                    spans.push(ratatui::text::Span::styled(
+                        theme.diff_bar_plus.to_string().repeat(plus_chars),
+                        Style::default().fg(Color::Green),
+                    ));
+                    spans.push(ratatui::text::Span::styled(
+                        theme.diff_bar_minus.to_string().repeat(minus_chars),
+                        Style::default().fg(Color::Red),
+                    ));
                 }
             }
 
