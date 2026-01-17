@@ -16,7 +16,8 @@ pub struct Theme {
     pub tree_dash: char,
     pub icon_dir: &'static str,
     pub icon_file: &'static str,
-    pub diff_bar_char: char,
+    pub diff_bar_plus: char,
+    pub diff_bar_minus: char,
     pub is_nerd: bool,
 }
 
@@ -37,7 +38,8 @@ impl Theme {
             tree_dash: '-',
             icon_dir: "",
             icon_file: "",
-            diff_bar_char: '|',
+            diff_bar_plus: '+',
+            diff_bar_minus: '-',
             is_nerd: false,
         }
     }
@@ -48,9 +50,10 @@ impl Theme {
             tree_branch: '├',
             tree_end: '└',
             tree_dash: '─',
-            icon_dir: "📁 ", // Unicode folder? Or just empty? Roadmap says Unicode has smoother lines. Nerd has icons.
+            icon_dir: "📁 ", // Unicode folder? Or just empty? Roadmap says Unicode has smoother lines.
             icon_file: "",
-            diff_bar_char: '◼',
+            diff_bar_plus: '◼',
+            diff_bar_minus: '◼',
             is_nerd: false,
         }
     }
@@ -63,7 +66,8 @@ impl Theme {
             tree_dash: '─',
             icon_dir: " ",
             icon_file: " ",
-            diff_bar_char: '◼',
+            diff_bar_plus: '◼',
+            diff_bar_minus: '◼',
             is_nerd: true,
         }
     }

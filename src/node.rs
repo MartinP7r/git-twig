@@ -108,8 +108,8 @@ impl Node {
 
                         let bar = format!(
                             "{}{}",
-                            theme.diff_bar_char.to_string().repeat(plus_chars).green(),
-                            theme.diff_bar_char.to_string().repeat(minus_chars).red()
+                            theme.diff_bar_plus.to_string().repeat(plus_chars).green(),
+                            theme.diff_bar_minus.to_string().repeat(minus_chars).red()
                         );
                         s.push_str(&format!(" | {} {}", total, bar));
                     }
