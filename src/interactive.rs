@@ -24,6 +24,46 @@ use crate::node::FlatNode;
 use crate::theme::Theme;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+enum FilterMode {
+    All,
+    Modified, // Hides untracked
+    Staged,   // Shows only staged
+}
+
+impl FilterMode {
+    fn next(&self) -> Self {
+        match self {
+            FilterMode::All => FilterMode::Modified,
+            FilterMode::Modified => FilterMode::Staged,
+            FilterMode::Staged => FilterMode::All,
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            FilterMode::All => "All",
+            FilterMode::Modified => "Modified",
+            FilterMode::Staged => "Staged",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum AppLayout {
+    Unified,
+    Split,
+}
+
+impl AppLayout {
+    fn next(&self) -> Self {
+        match self {
+            AppLayout::Unified => AppLayout::Split,
+            AppLayout::Split => AppLayout::Unified,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Focus {
     Staged,
     Unstaged,
@@ -70,8 +110,12 @@ struct App {
     collapse: bool,
     staged_nodes: Vec<FlatNode>,
     unstaged_nodes: Vec<FlatNode>,
+    unified_nodes: Vec<FlatNode>, // For Unified view
     staged_state: ListState,
     unstaged_state: ListState,
+    unified_state: ListState,
+    layout: AppLayout,
+    filter_mode: FilterMode,
     focus: Focus,
     view_mode: ViewMode,
     diff_content: String,
@@ -87,9 +131,13 @@ impl App {
             collapse,
             staged_nodes: Vec::new(),
             unstaged_nodes: Vec::new(),
+            unified_nodes: Vec::new(),
             staged_state: ListState::default(),
             unstaged_state: ListState::default(),
-            focus: Focus::Unstaged, // Start in Unstaged usually
+            unified_state: ListState::default(),
+            layout: AppLayout::Unified, // Default to Unified
+            filter_mode: FilterMode::All,
+            focus: Focus::Unstaged,
             view_mode: ViewMode::Tree,
             diff_content: String::new(),
             diff_scroll: 0,
@@ -101,62 +149,96 @@ impl App {
     }
 
     fn refresh(&mut self) -> Result<()> {
-        // 1. Fetch Staged
-        let staged_tree = build_tree_from_git(true, false, false, false)?;
-        if let Some(root) = staged_tree {
-            self.staged_nodes = root.flatten(self.indent_size, self.collapse, &self.theme);
-        } else {
-            self.staged_nodes = Vec::new();
+        match self.layout {
+            AppLayout::Unified => {
+                let (staged, modified) = match self.filter_mode {
+                    FilterMode::All => (false, false),
+                    FilterMode::Modified => (false, true),
+                    FilterMode::Staged => (true, false),
+                };
+
+                let tree = build_tree_from_git(staged, modified, false, false)?;
+                if let Some(root) = tree {
+                    self.unified_nodes = root.flatten(self.indent_size, self.collapse, &self.theme);
+                } else {
+                    self.unified_nodes = Vec::new();
+                }
+
+                // Calculate width
+                self.max_name_width = self
+                    .unified_nodes
+                    .iter()
+                    .map(|n| n.connector.chars().count() + n.name.chars().count())
+                    .max()
+                    .unwrap_or(0);
+
+                // Adjust selection
+                Self::adjust_selection(&self.unified_nodes, &mut self.unified_state, true);
+            }
+            AppLayout::Split => {
+                // 1. Fetch Staged
+                let staged_tree = build_tree_from_git(true, false, false, false)?;
+                if let Some(root) = staged_tree {
+                    self.staged_nodes = root.flatten(self.indent_size, self.collapse, &self.theme);
+                } else {
+                    self.staged_nodes = Vec::new();
+                }
+
+                // 2. Fetch All (Unstaged + Untracked + Staged-mixed)
+                let all_tree = build_tree_from_git(false, false, false, false)?;
+                if let Some(root) = all_tree {
+                    let all = root.flatten(self.indent_size, self.collapse, &self.theme);
+                    self.unstaged_nodes = all
+                        .into_iter()
+                        .filter(|n| !n.raw_status.ends_with('+'))
+                        .collect();
+                } else {
+                    self.unstaged_nodes = Vec::new();
+                }
+
+                // Calculate max width across BOTH lists for consistent alignment
+                let max_staged = self
+                    .staged_nodes
+                    .iter()
+                    .map(|n| n.connector.chars().count() + n.name.chars().count())
+                    .max()
+                    .unwrap_or(0);
+                let max_unstaged = self
+                    .unstaged_nodes
+                    .iter()
+                    .map(|n| n.connector.chars().count() + n.name.chars().count())
+                    .max()
+                    .unwrap_or(0);
+
+                self.max_name_width = max_staged.max(max_unstaged);
+
+                // Adjust selections
+                let staged_active = self.focus == Focus::Staged;
+                Self::adjust_selection(&self.staged_nodes, &mut self.staged_state, staged_active);
+
+                let unstaged_active = self.focus == Focus::Unstaged;
+                Self::adjust_selection(
+                    &self.unstaged_nodes,
+                    &mut self.unstaged_state,
+                    unstaged_active,
+                );
+            }
         }
-
-        // 2. Fetch All (Unstaged + Untracked + Staged-mixed)
-        // We fetch "All" (false, false, false) which includes everything.
-        // Then we filter out nodes that are PURELY staged (status == "+").
-        // "M+" (mixed) should remain in Unstaged view because it has unstaged changes.
-        // "??" (untracked) should remain.
-        // "M" (modified) should remain.
-        let all_tree = build_tree_from_git(false, false, false, false)?;
-        if let Some(root) = all_tree {
-            let all = root.flatten(self.indent_size, self.collapse, &self.theme);
-            self.unstaged_nodes = all
-                .into_iter()
-                .filter(|n| {
-                    // Keep if NOT purely staged (which ends with + in our parser)
-                    !n.raw_status.ends_with('+')
-                })
-                .collect();
-        } else {
-            self.unstaged_nodes = Vec::new();
-        }
-
-        // Calculate max width across BOTH lists for consistent alignment
-        let max_staged = self
-            .staged_nodes
-            .iter()
-            .map(|n| n.connector.chars().count() + n.name.chars().count())
-            .max()
-            .unwrap_or(0);
-        let max_unstaged = self
-            .unstaged_nodes
-            .iter()
-            .map(|n| n.connector.chars().count() + n.name.chars().count())
-            .max()
-            .unwrap_or(0);
-
-        self.max_name_width = max_staged.max(max_unstaged);
-
-        // Adjust selections
-        let staged_active = self.focus == Focus::Staged;
-        Self::adjust_selection(&self.staged_nodes, &mut self.staged_state, staged_active);
-
-        let unstaged_active = self.focus == Focus::Unstaged;
-        Self::adjust_selection(
-            &self.unstaged_nodes,
-            &mut self.unstaged_state,
-            unstaged_active,
-        );
-
         Ok(())
+    }
+
+    fn toggle_filter(&mut self) -> Result<()> {
+        if self.layout == AppLayout::Unified {
+            self.filter_mode = self.filter_mode.next();
+            self.refresh()
+        } else {
+            Ok(())
+        }
+    }
+
+    fn toggle_layout(&mut self) -> Result<()> {
+        self.layout = self.layout.next();
+        self.refresh()
     }
 
     fn adjust_selection(nodes: &[FlatNode], state: &mut ListState, is_active: bool) {
@@ -184,9 +266,12 @@ impl App {
     }
 
     fn show_diff(&mut self) -> Result<()> {
-        let (nodes, state) = match self.focus {
-            Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
-            Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+        let (nodes, state) = match self.layout {
+            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Split => match self.focus {
+                Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+                Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+            },
         };
 
         if let Some(i) = state.selected() {
@@ -257,9 +342,12 @@ impl App {
     }
 
     fn next(&mut self) {
-        let (nodes, state) = match self.focus {
-            Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
-            Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+        let (nodes, state) = match self.layout {
+            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Split => match self.focus {
+                Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+                Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+            },
         };
 
         if nodes.is_empty() {
@@ -279,9 +367,12 @@ impl App {
     }
 
     fn previous(&mut self) {
-        let (nodes, state) = match self.focus {
-            Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
-            Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+        let (nodes, state) = match self.layout {
+            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Split => match self.focus {
+                Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+                Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+            },
         };
 
         if nodes.is_empty() {
@@ -301,9 +392,12 @@ impl App {
     }
 
     fn toggle_stage(&mut self) -> Result<()> {
-        let (nodes, state) = match self.focus {
-            Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
-            Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+        let (nodes, state) = match self.layout {
+            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Split => match self.focus {
+                Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+                Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+            },
         };
 
         if let Some(i) = state.selected() {
@@ -345,8 +439,18 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                         KeyCode::Char('s') | KeyCode::Char(' ') => {
                             let _ = app.toggle_stage();
                         }
-                        KeyCode::Char('f') | KeyCode::Tab => {
-                            app.toggle_focus();
+                        KeyCode::Char('f') => {
+                            if app.layout == AppLayout::Unified {
+                                let _ = app.toggle_filter();
+                            }
+                        }
+                        KeyCode::Char('v') => {
+                            let _ = app.toggle_layout();
+                        }
+                        KeyCode::Tab => {
+                            if app.layout == AppLayout::Split {
+                                app.toggle_focus();
+                            }
                         }
                         KeyCode::Enter => {
                             let _ = app.show_diff();
@@ -382,57 +486,104 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         return;
     }
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
-            Constraint::Length(3),
-        ])
-        .split(f.size());
+    match app.layout {
+        AppLayout::Unified => {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(0), Constraint::Length(3)])
+                .split(f.size());
 
-    // --- Staged List (Top) ---
-    render_list(
-        f,
-        &app.theme,
-        app.max_name_width,
-        &app.staged_nodes,
-        &mut app.staged_state,
-        chunks[0],
-        " Staged Changes ",
-        Focus::Staged,
-        app.focus,
-    );
+            let title = format!(
+                " git-twig interactive | Filter: {} ",
+                app.filter_mode.as_str()
+            );
+            render_list(
+                f,
+                &app.theme,
+                app.max_name_width,
+                &app.unified_nodes,
+                &mut app.unified_state,
+                chunks[0],
+                &title,
+                Focus::Unstaged, // Focus not really used here, pass dummy
+                Focus::Unstaged, // Match dummy
+            );
 
-    // --- Unstaged List (Bottom) ---
-    render_list(
-        f,
-        &app.theme,
-        app.max_name_width,
-        &app.unstaged_nodes,
-        &mut app.unstaged_state,
-        chunks[1],
-        " Unstaged Changes ",
-        Focus::Unstaged,
-        app.focus,
-    );
+            // Help for Unified
+            let help_text = vec![
+                ratatui::text::Span::raw(" [j/k]"),
+                ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
+                ratatui::text::Span::raw("  [Space]"),
+                ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
+                ratatui::text::Span::raw("  [f]"),
+                ratatui::text::Span::styled(" Filter", Style::default().fg(Color::Yellow)),
+                ratatui::text::Span::raw("  [v]"),
+                ratatui::text::Span::styled(" View", Style::default().fg(Color::Green)),
+                ratatui::text::Span::raw("  [Enter]"),
+                ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
+                ratatui::text::Span::raw("  [q]"),
+                ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
+            ];
+            let help = Paragraph::new(Line::from(help_text))
+                .block(Block::default().borders(Borders::ALL).title(" Help "));
+            f.render_widget(help, chunks[1]);
+        }
+        AppLayout::Split => {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Percentage(50),
+                    Constraint::Percentage(50),
+                    Constraint::Length(3),
+                ])
+                .split(f.size());
 
-    // --- Help ---
-    let help_text = vec![
-        ratatui::text::Span::raw(" [Tab]"),
-        ratatui::text::Span::styled(" Switch Pane", Style::default().fg(Color::Yellow)),
-        ratatui::text::Span::raw("  [j/k]"),
-        ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
-        ratatui::text::Span::raw("  [Space]"),
-        ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
-        ratatui::text::Span::raw("  [Enter]"),
-        ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
-        ratatui::text::Span::raw("  [q]"),
-        ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
-    ];
-    let help = Paragraph::new(Line::from(help_text))
-        .block(Block::default().borders(Borders::ALL).title(" Help "));
-    f.render_widget(help, chunks[2]);
+            // --- Staged List (Top) ---
+            render_list(
+                f,
+                &app.theme,
+                app.max_name_width,
+                &app.staged_nodes,
+                &mut app.staged_state,
+                chunks[0],
+                " Staged Changes ",
+                Focus::Staged,
+                app.focus,
+            );
+
+            // --- Unstaged List (Bottom) ---
+            render_list(
+                f,
+                &app.theme,
+                app.max_name_width,
+                &app.unstaged_nodes,
+                &mut app.unstaged_state,
+                chunks[1],
+                " Unstaged Changes ",
+                Focus::Unstaged,
+                app.focus,
+            );
+
+            // --- Help for Split ---
+            let help_text = vec![
+                ratatui::text::Span::raw(" [Tab]"),
+                ratatui::text::Span::styled(" Switch Pane", Style::default().fg(Color::Yellow)),
+                ratatui::text::Span::raw("  [j/k]"),
+                ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
+                ratatui::text::Span::raw("  [Space]"),
+                ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
+                ratatui::text::Span::raw("  [v]"),
+                ratatui::text::Span::styled(" View", Style::default().fg(Color::Green)),
+                ratatui::text::Span::raw("  [Enter]"),
+                ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
+                ratatui::text::Span::raw("  [q]"),
+                ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
+            ];
+            let help = Paragraph::new(Line::from(help_text))
+                .block(Block::default().borders(Borders::ALL).title(" Help "));
+            f.render_widget(help, chunks[2]);
+        }
+    }
 }
 
 fn render_list(
