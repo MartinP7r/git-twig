@@ -386,3 +386,25 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         .block(Block::default().borders(Borders::ALL).title(" Help "));
     f.render_widget(help, chunks[1]);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_filter_mode_transitions() {
+        let mode = FilterMode::All;
+        assert_eq!(mode.as_str(), "All");
+
+        let mode = mode.next();
+        assert_eq!(mode, FilterMode::Modified);
+        assert_eq!(mode.as_str(), "Modified");
+
+        let mode = mode.next();
+        assert_eq!(mode, FilterMode::Staged);
+        assert_eq!(mode.as_str(), "Staged");
+
+        let mode = mode.next();
+        assert_eq!(mode, FilterMode::All);
+    }
+}
