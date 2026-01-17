@@ -673,6 +673,7 @@ fn render_bottom_bar(f: &mut ratatui::Frame, app: &App, area: ratatui::layout::R
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_list(
     f: &mut ratatui::Frame,
     theme: &Theme,
@@ -707,11 +708,7 @@ fn render_list(
 
             // Stats bar logic
             let width = node.connector.chars().count() + node.name.chars().count();
-            let padding_len = if max_name_width > width {
-                max_name_width - width
-            } else {
-                0
-            };
+            let padding_len = max_name_width.saturating_sub(width);
             let padding = " ".repeat(padding_len);
 
             let mut spans = vec![
