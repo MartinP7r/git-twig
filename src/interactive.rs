@@ -159,7 +159,9 @@ impl App {
             let q = query.to_lowercase();
             nodes
                 .iter()
-                .filter(|n| n.name.to_lowercase().contains(&q) || n.full_path.to_lowercase().contains(&q))
+                .filter(|n| {
+                    n.name.to_lowercase().contains(&q) || n.full_path.to_lowercase().contains(&q)
+                })
                 .collect()
         }
     }
@@ -553,9 +555,12 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                 .constraints([Constraint::Min(0), Constraint::Length(3)])
                 .split(f.size());
 
-            let title = format!(" git-twig interactive | Filter: {} ", app.filter_mode.as_str());
+            let title = format!(
+                " git-twig interactive | Filter: {} ",
+                app.filter_mode.as_str()
+            );
             let filtered = App::filter_nodes(&app.unified_nodes, &app.search_query);
-            
+
             render_list(
                 f,
                 &app.theme,
@@ -615,7 +620,11 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
 
 fn render_bottom_bar(f: &mut ratatui::Frame, app: &App, area: ratatui::layout::Rect) {
     if app.is_typing_search || !app.search_query.is_empty() {
-        let prefix = if app.is_typing_search { "/" } else { "Search: " };
+        let prefix = if app.is_typing_search {
+            "/"
+        } else {
+            "Search: "
+        };
         let text = format!("{}{}", prefix, app.search_query);
         let p = Paragraph::new(text)
             .style(Style::default().fg(Color::Yellow))
@@ -835,7 +844,7 @@ mod tests {
 
         let filtered_all = App::filter_nodes(&nodes, "");
         assert_eq!(filtered_all.len(), 2);
-        
+
         let filtered_none = App::filter_nodes(&nodes, "baz");
         assert_eq!(filtered_none.len(), 0);
     }
