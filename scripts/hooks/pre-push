@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# Pre-push hook to check formatting and stage changes
+
+# Avoid infinite loop if we are pushing from this hook (unlikely but good practice)
+if [ "$NO_VERIFY" ]; then
+    exit 0
+fi
+
+# Read pushed refs from stdin
+while read local_ref local_sha remote_ref remote_sha
+do
+    # If deleting a branch (local_sha=000...), skip
+    if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+
+    echo "Verifying formatting for push: $local_sha -> $remote_sha"
+
+    # Determine range of commits
+    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+        # New branch push - compare against tracked upstream or default to origin/main?
+        # Trying to find the merge base with origin/main is safer for finding "new" commits
+        # Check if origin/main exists
+        if git rev-parse --verify origin/main >/dev/null 2>&1; then
+             range="origin/main...$local_sha"
+        else
+             # Fallback: check all commits? Or HEAD?
+             # Let's check against HEAD~1 equivalent or just all files in current commit?
+             # For a new branch, we probably want to check changed files relative to where we branched off.
+             range="HEAD" # Determine files in current checkout?
+             # Better: git diff --name-only --cached? No, pre-push is post-commit.
+             # Use `git log --oneline --not --remotes=origin` to find commits?
+             # Simplest heuristic: check files changed in the commits being pushed if possible.
+             # If no upstream, maybe we assume `main`.
+             range="main...$local_sha" 
+        fi
+    else
+        range="$remote_sha..$local_sha"
+    fi
+
+    # Get list of .rs files changed in this range
+    # --diff-filter=d excludes deleted files
+    files=$(git diff --name-only --diff-filter=d "$range" | grep "\.rs$")
+    
+    if [ -z "$files" ]; then
+        continue
+    fi
+    
+    # Filter to ensure files exist on disk
+    existing_files=""
+    for f in $files; do
+        if [ -f "$f" ]; then
+            existing_files="$existing_files $f"
+        fi
+    done
+    
+    if [ -z "$existing_files" ]; then
+        continue
+    fi
+
+    echo "Checking formatting for ${#existing_files[@]} Rust files..."
+
+    # Run cargo fmt on these files
+    # cargo fmt -- file1 file2 ...
+    cargo fmt -- $existing_files
+    
+    # Check if any of these files are now modified (unstaged changes)
+    # verifying specifically the files we just formatted
+    dirty_files=$(git diff --name-only -- $existing_files)
+    
+    if [ -n "$dirty_files" ]; then
+        echo "--------------------------------------------------------"
+        echo "⚠️  FORMATTING CHECK FAILED"
+        echo "The following files in your push were not formatted:"
+        echo "$dirty_files"
+        echo ""
+        
+        # Stage the files as requested
+        for f in $dirty_files; do
+            git add "$f"
+        done
+        
+        echo "✅ Staged formatted versions of these files."
+        echo "❌ Push aborted."
+        echo "👉 Please commit these formatting changes and push again."
+        echo "--------------------------------------------------------"
+        exit 1
+    fi
+done
+
+exit 0
