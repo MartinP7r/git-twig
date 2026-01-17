@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Pre-commit hook to check formatting and lint
+
+echo "Running pre-commit checks..."
+
+# Check formatting
+cargo fmt --check
+FMT_STATUS=$?
+
+if [ $FMT_STATUS -ne 0 ]; then
+    echo "--------------------------------------------------------"
+    echo "⚠️  FORMAT CHECK FAILED"
+    echo "Run 'cargo fmt' to fix formatting issues."
+    echo "--------------------------------------------------------"
+    exit 1
+fi
+
+# Check lints
+cargo clippy -- -D warnings
+CLIPPY_STATUS=$?
+
+if [ $CLIPPY_STATUS -ne 0 ]; then
+    echo "--------------------------------------------------------"
+    echo "⚠️  LINT CHECK FAILED"
+    echo "Fix the clippy warnings above before committing."
+    echo "--------------------------------------------------------"
+    exit 1
+fi
+
+echo "✅ All checks passed!"
+exit 0
