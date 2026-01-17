@@ -21,6 +21,31 @@ use ratatui::{
 use crate::build_tree_from_git;
 use crate::node::FlatNode;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum FilterMode {
+    All,
+    Modified, // Hides untracked
+    Staged,   // Shows only staged
+}
+
+impl FilterMode {
+    fn next(&self) -> Self {
+        match self {
+            FilterMode::All => FilterMode::Modified,
+            FilterMode::Modified => FilterMode::Staged,
+            FilterMode::Staged => FilterMode::All,
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            FilterMode::All => "All",
+            FilterMode::Modified => "Modified",
+            FilterMode::Staged => "Staged",
+        }
+    }
+}
+
 pub fn run(indent: usize, collapse: bool) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -47,6 +72,7 @@ struct App {
     collapse: bool,
     nodes: Vec<FlatNode>,
     state: ListState,
+    filter_mode: FilterMode,
 }
 
 impl App {
@@ -56,23 +82,47 @@ impl App {
             collapse,
             nodes: Vec::new(),
             state: ListState::default(),
+            filter_mode: FilterMode::All,
         };
         app.refresh()?;
         Ok(app)
     }
 
     fn refresh(&mut self) -> Result<()> {
-        let tree = build_tree_from_git(false, false)?;
+        let (staged, modified) = match self.filter_mode {
+            FilterMode::All => (false, false),
+            FilterMode::Modified => (false, true),
+            FilterMode::Staged => (true, false),
+        };
+
+        let tree = build_tree_from_git(staged, modified)?;
         if let Some(root) = tree {
             self.nodes = root.flatten(self.indent_size, self.collapse);
-            if self.state.selected().is_none() && !self.nodes.is_empty() {
-                self.state.select(Some(0));
+            
+            // Adjust selection if out of bounds
+            if let Some(selected) = self.state.selected() {
+                if selected >= self.nodes.len() {
+                    if !self.nodes.is_empty() {
+                         self.state.select(Some(self.nodes.len() - 1));
+                    } else {
+                         self.state.select(None);
+                    }
+                }
+            } else if !self.nodes.is_empty() {
+                 self.state.select(Some(0));
+            } else {
+                 self.state.select(None);
             }
         } else {
             self.nodes = Vec::new();
             self.state.select(None);
         }
         Ok(())
+    }
+
+    fn toggle_filter(&mut self) -> Result<()> {
+        self.filter_mode = self.filter_mode.next();
+        self.refresh()
     }
 
     fn next(&mut self) {
@@ -161,6 +211,9 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                     KeyCode::Char('u') => {
                         let _ = app.unstage();
                     }
+                    KeyCode::Char('f') => {
+                        let _ = app.toggle_filter();
+                    }
                     _ => {}
                 }
             }
@@ -206,11 +259,13 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         })
         .collect();
 
+    let title = format!(" git-twig interactive | Filter: {} ", app.filter_mode.as_str());
+
     let list = List::new(items)
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" git-twig interactive "),
+                .title(title),
         )
         .highlight_style(
             Style::default()
@@ -223,11 +278,13 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
 
     let help_text = vec![
         ratatui::text::Span::raw(" [j/k]"),
-        ratatui::text::Span::styled(" Navigate", Style::default().fg(Color::Gray)),
-        ratatui::text::Span::raw("  [s/Space]"),
+        ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
+        ratatui::text::Span::raw("  [Space]"),
         ratatui::text::Span::styled(" Stage", Style::default().fg(Color::Green)),
         ratatui::text::Span::raw("  [u]"),
         ratatui::text::Span::styled(" Unstage", Style::default().fg(Color::Red)),
+        ratatui::text::Span::raw("  [f]"),
+        ratatui::text::Span::styled(" Filter", Style::default().fg(Color::Yellow)),
         ratatui::text::Span::raw("  [q]"),
         ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
     ];
