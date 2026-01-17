@@ -46,6 +46,12 @@ impl FilterMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ViewMode {
+    Tree,
+    Diff,
+}
+
 pub fn run(indent: usize, collapse: bool) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -73,6 +79,9 @@ struct App {
     nodes: Vec<FlatNode>,
     state: ListState,
     filter_mode: FilterMode,
+    view_mode: ViewMode,
+    diff_content: String,
+    diff_scroll: u16,
 }
 
 impl App {
@@ -83,6 +92,9 @@ impl App {
             nodes: Vec::new(),
             state: ListState::default(),
             filter_mode: FilterMode::All,
+            view_mode: ViewMode::Tree,
+            diff_content: String::new(),
+            diff_scroll: 0,
         };
         app.refresh()?;
         Ok(app)
@@ -123,6 +135,73 @@ impl App {
     fn toggle_filter(&mut self) -> Result<()> {
         self.filter_mode = self.filter_mode.next();
         self.refresh()
+    }
+
+    fn show_diff(&mut self) -> Result<()> {
+        if let Some(i) = self.state.selected() {
+            if let Some(node) = self.nodes.get(i) {
+                if node.is_dir {
+                    return Ok(());
+                }
+
+                // Determine git diff arguments
+                let mut args = vec!["diff", "--no-color"];
+                
+                // If staged, add --cached
+                // Check raw status:
+                // "A+" -> staged
+                // "M+" -> staged
+                // "M" -> unstaged
+                // "??" -> untracked
+                if node.raw_status.contains('+') {
+                    args.push("--cached");
+                }
+                
+                // If untracked, git diff won't show anything unless we use --no-index /dev/null <file>
+                // Or just cat the file.
+                if node.raw_status == "??" {
+                     // For untracked, simpler to just reading the file
+                     // But let's try to keep it consistent.
+                     // A hack is to diff against /dev/null
+                     // But git diff --no-index /dev/null <file> works
+                     args.push("--no-index");
+                     args.push("/dev/null");
+                }
+                
+                args.push(&node.full_path);
+
+                let output = Command::new("git").args(args).output()?;
+                
+                if output.status.success() || output.status.code() == Some(1) { // diff returns 1 if differences found
+                     let content = String::from_utf8_lossy(&output.stdout).to_string();
+                     if content.is_empty() && node.raw_status != "??" {
+                         self.diff_content = "(No diff or binary file)".to_string();
+                     } else {
+                         self.diff_content = content;
+                     }
+                     self.view_mode = ViewMode::Diff;
+                     self.diff_scroll = 0;
+                } else {
+                     let err = String::from_utf8_lossy(&output.stderr);
+                     self.diff_content = format!("Error running git diff: {}", err);
+                     self.view_mode = ViewMode::Diff;
+                }
+            }
+        }
+        Ok(())
+    }
+    
+    fn close_diff(&mut self) {
+        self.view_mode = ViewMode::Tree;
+        self.diff_content.clear();
+    }
+
+    fn scroll_diff(&mut self, amount: i16) {
+        if amount > 0 {
+            self.diff_scroll = self.diff_scroll.saturating_add(amount as u16);
+        } else {
+            self.diff_scroll = self.diff_scroll.saturating_sub((-amount) as u16);
+        }
     }
 
     fn next(&mut self) {
@@ -201,20 +280,31 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
 
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char('j') | KeyCode::Down => app.next(),
-                    KeyCode::Char('k') | KeyCode::Up => app.previous(),
-                    KeyCode::Char('s') | KeyCode::Char(' ') => {
-                        let _ = app.stage();
+                match app.view_mode {
+                    ViewMode::Tree => match key.code {
+                        KeyCode::Char('q') => return Ok(()),
+                        KeyCode::Char('j') | KeyCode::Down => app.next(),
+                        KeyCode::Char('k') | KeyCode::Up => app.previous(),
+                        KeyCode::Char('s') | KeyCode::Char(' ') => {
+                            let _ = app.stage();
+                        }
+                        KeyCode::Char('u') => {
+                            let _ = app.unstage();
+                        }
+                        KeyCode::Char('f') => {
+                            let _ = app.toggle_filter();
+                        }
+                        KeyCode::Enter => {
+                            let _ = app.show_diff();
+                        }
+                        _ => {}
+                    },
+                    ViewMode::Diff => match key.code {
+                        KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter => app.close_diff(),
+                        KeyCode::Char('j') | KeyCode::Down => app.scroll_diff(1),
+                        KeyCode::Char('k') | KeyCode::Up => app.scroll_diff(-1),
+                        _ => {}
                     }
-                    KeyCode::Char('u') => {
-                        let _ = app.unstage();
-                    }
-                    KeyCode::Char('f') => {
-                        let _ = app.toggle_filter();
-                    }
-                    _ => {}
                 }
             }
         }
@@ -222,6 +312,27 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
 }
 
 fn ui(f: &mut ratatui::Frame, app: &mut App) {
+    // If in diff mode, render diff popup
+    if app.view_mode == ViewMode::Diff {
+         let area = f.size();
+         // Simple parsing of ANSI codes
+         // Ratatui Text::from can parse ANSI if enabled or we use a crate like `ansi-to-tui`
+         // Standard `Text::from(string)` does NOT parse ANSI sequences, it displays them as esc chars.
+         // We'll strip ANSI for now to be safe, unless we add a dep.
+         // Or use `ratatui::text::Text::from_ansi`?
+         // Checking ratatui docs (v0.29): Text::from(String) doesn't.
+         // But there is `ratatui::text::Text::from(an_ansi_string)`. Wait, no.
+         // For now, let's just strip ANSI to avoid garbage.
+         // Or use `--no-color` in git command above.
+         // I'll update git command to `--no-color` in `show_diff` for MVP simplicity.
+         
+         let paragraph = Paragraph::new(app.diff_content.clone())
+            .block(Block::default().borders(Borders::ALL).title(" Diff "))
+            .scroll((app.diff_scroll, 0));
+         f.render_widget(paragraph, area);
+         return;
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(0), Constraint::Length(3)])
@@ -285,6 +396,8 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         ratatui::text::Span::styled(" Unstage", Style::default().fg(Color::Red)),
         ratatui::text::Span::raw("  [f]"),
         ratatui::text::Span::styled(" Filter", Style::default().fg(Color::Yellow)),
+        ratatui::text::Span::raw("  [Enter]"),
+        ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
         ratatui::text::Span::raw("  [q]"),
         ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
     ];
