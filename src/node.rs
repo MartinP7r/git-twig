@@ -3,8 +3,13 @@ use std::cmp::Ordering;
 
 #[derive(Debug, Clone)]
 pub enum NodeType {
-    File { status: String, stats: Option<(usize, usize)> },
-    Directory { children: Vec<Node> },
+    File {
+        status: String,
+        stats: Option<(usize, usize)>,
+    },
+    Directory {
+        children: Vec<Node>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -15,7 +20,12 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new_file(name: String, full_path: String, status: String, stats: Option<(usize, usize)>) -> Self {
+    pub fn new_file(
+        name: String,
+        full_path: String,
+        status: String,
+        stats: Option<(usize, usize)>,
+    ) -> Self {
         Node {
             name,
             full_path,
@@ -62,9 +72,9 @@ impl Node {
                 } else {
                     self.name.red()
                 };
-                
+
                 let mut s = format!("{} ({})", color_name, status);
-                
+
                 if let Some((added, deleted)) = stats {
                     let total = added + deleted;
                     if total > 0 {
@@ -73,11 +83,11 @@ impl Node {
                         // Scale? If total is huge, we cap the bar length?
                         // Let's assume max bar width of 5-10 chars.
                         let max_width = 10;
-                        
+
                         // Calculate ratio of + to -
                         // If total > max, we scale down.
                         // f64 ops might be overkill but safest.
-                        
+
                         let (plus_chars, minus_chars) = if total <= max_width {
                             (*added, *deleted)
                         } else {
@@ -86,8 +96,12 @@ impl Node {
                             let m = max_width - p;
                             (p, m)
                         };
-                        
-                        let bar = format!("{}{}", "+".repeat(plus_chars).green(), "-".repeat(minus_chars).red());
+
+                        let bar = format!(
+                            "{}{}",
+                            "+".repeat(plus_chars).green(),
+                            "-".repeat(minus_chars).red()
+                        );
                         s.push_str(&format!(" | {} {}", total, bar));
                     }
                 }
@@ -98,13 +112,13 @@ impl Node {
 
     pub fn render_tree(&self, indent: usize, collapse: bool) -> String {
         let mut out = String::new();
-        // Root is usually "." 
-        // If we are root, we don't collapse ourselves generally (unless we are just a wrapper?). 
+        // Root is usually "."
+        // If we are root, we don't collapse ourselves generally (unless we are just a wrapper?).
         // Logic for root node behavior
         // Let's assume root is never collapsed.
-        
+
         out.push_str(&format!("{}\n", self.format_name()));
-        
+
         if let NodeType::Directory { children } = &self.node_type {
             self.render_children(children, indent, collapse, "", &mut out);
         }
@@ -112,28 +126,28 @@ impl Node {
     }
 
     fn render_children(
-        &self, 
-        children: &[Node], 
-        indent: usize, 
-        collapse: bool, 
-        prefix: &str, 
-        out: &mut String
+        &self,
+        children: &[Node],
+        indent: usize,
+        collapse: bool,
+        prefix: &str,
+        out: &mut String,
     ) {
         let count = children.len();
         for (i, child) in children.iter().enumerate() {
             let is_last = i == count - 1;
-            
+
             // Check for collapsing
             // If collapse is ON, and child is collapsible (Dir containing 1 Dir),
             // then we should effectively "skip" printing the connector for the child,
             // and instead print the collapsed chain.
-            
+
             let (display_node, _effective_children) = if collapse {
                 child.get_collapsed_view()
             } else {
                 (child.clone(), None)
             };
-            
+
             let children_to_render = match &display_node.node_type {
                 NodeType::Directory { children } => Some(children),
                 _ => None,
@@ -141,32 +155,38 @@ impl Node {
             // Note: effective_children might be the children of the bottom-most collapsed node.
             // But get_collapsed_view should return a synthetic Node that has the name "a/b/c"
             // and the children of "c".
-            
+
             // Prepare the connector
             let connector = if is_last { "└" } else { "├" };
             let dashes = "─".repeat(indent - 2);
-            
+
             // Print current child line
-            out.push_str(&format!("{}{}{} {}\n", prefix, connector, dashes, display_node.format_name()));
-            
+            out.push_str(&format!(
+                "{}{}{} {}\n",
+                prefix,
+                connector,
+                dashes,
+                display_node.format_name()
+            ));
+
             // Recurse if child is directory (and we have children to show)
             if let Some(recurs_children) = children_to_render {
-                 let extension = if is_last { " " } else { "│" };
-                 let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent - 1));
-                 // We recurse on the ORIGINAL logic's children?
-                 // No, on the children of the display node.
-                 self.render_children(recurs_children, indent, collapse, &new_prefix, out);
+                let extension = if is_last { " " } else { "│" };
+                let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent - 1));
+                // We recurse on the ORIGINAL logic's children?
+                // No, on the children of the display node.
+                self.render_children(recurs_children, indent, collapse, &new_prefix, out);
             }
         }
     }
-    
+
     // Returns (NewNode, Option<OriginalChildren>)
     // Actually just returns a Node that represents the collapsed view.
     fn get_collapsed_view(&self) -> (Node, Option<Vec<Node>>) {
         if !self.is_dir() {
             return (self.clone(), None);
         }
-        
+
         // Check if collapsible: Dir with exactly 1 child which is also a Dir
         if let NodeType::Directory { children } = &self.node_type {
             if children.len() == 1 {
@@ -175,10 +195,10 @@ impl Node {
                     // It is collapsible.
                     // We need to recursively collapse the child.
                     let (child_collapsed, _) = only_child.get_collapsed_view();
-                    
+
                     // Combine names
                     let new_name = format!("{}/{}", self.name, child_collapsed.name);
-                    
+
                     // Create new combined node
                     let combined = Node {
                         name: new_name,
@@ -189,7 +209,7 @@ impl Node {
                 }
             }
         }
-        
+
         (self.clone(), None)
     }
 

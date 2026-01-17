@@ -76,7 +76,9 @@ impl App {
     }
 
     fn next(&mut self) {
-        if self.nodes.is_empty() { return; }
+        if self.nodes.is_empty() {
+            return;
+        }
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.nodes.len() - 1 {
@@ -91,7 +93,9 @@ impl App {
     }
 
     fn previous(&mut self) {
-        if self.nodes.is_empty() { return; }
+        if self.nodes.is_empty() {
+            return;
+        }
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
@@ -112,7 +116,7 @@ impl App {
                 if node.raw_status == "D+" {
                     return Ok(());
                 }
-                
+
                 let status = Command::new("git")
                     .args(["add", &node.full_path])
                     .status()?;
@@ -192,13 +196,22 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
             };
             let name = ratatui::text::Span::styled(&node.name, name_style);
 
-            let line = Line::from(vec![status_indicator, ratatui::text::Span::raw(" "), connector, name]);
+            let line = Line::from(vec![
+                status_indicator,
+                ratatui::text::Span::raw(" "),
+                connector,
+                name,
+            ]);
             ListItem::new(line)
         })
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title(" git-twig interactive "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" git-twig interactive "),
+        )
         .highlight_style(
             Style::default()
                 .bg(Color::Rgb(50, 50, 50))
