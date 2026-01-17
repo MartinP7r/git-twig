@@ -21,6 +21,7 @@ use ratatui::{
 
 use crate::build_tree_from_git;
 use crate::node::FlatNode;
+use crate::theme::Theme;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum FilterMode {
@@ -53,14 +54,14 @@ enum ViewMode {
     Diff,
 }
 
-pub fn run(indent: usize, collapse: bool) -> Result<()> {
+pub fn run(indent: usize, collapse: bool, theme: Theme) -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new(indent, collapse)?;
+    let mut app = App::new(indent, collapse, theme)?;
     let res = run_app(&mut terminal, &mut app);
 
     disable_raw_mode()?;
@@ -83,10 +84,11 @@ struct App {
     view_mode: ViewMode,
     diff_content: String,
     diff_scroll: u16,
+    theme: Theme,
 }
 
 impl App {
-    fn new(indent_size: usize, collapse: bool) -> Result<Self> {
+    fn new(indent_size: usize, collapse: bool, theme: Theme) -> Result<Self> {
         let mut app = App {
             indent_size,
             collapse,
@@ -96,6 +98,7 @@ impl App {
             view_mode: ViewMode::Tree,
             diff_content: String::new(),
             diff_scroll: 0,
+            theme,
         };
         app.refresh()?;
         Ok(app)
@@ -110,21 +113,21 @@ impl App {
 
         let tree = build_tree_from_git(staged, modified, false, false)?;
         if let Some(root) = tree {
-            self.nodes = root.flatten(self.indent_size, self.collapse);
-            
+            self.nodes = root.flatten(self.indent_size, self.collapse, &self.theme);
+
             // Adjust selection if out of bounds
             if let Some(selected) = self.state.selected() {
                 if selected >= self.nodes.len() {
                     if !self.nodes.is_empty() {
-                         self.state.select(Some(self.nodes.len() - 1));
+                        self.state.select(Some(self.nodes.len() - 1));
                     } else {
-                         self.state.select(None);
+                        self.state.select(None);
                     }
                 }
             } else if !self.nodes.is_empty() {
-                 self.state.select(Some(0));
+                self.state.select(Some(0));
             } else {
-                 self.state.select(None);
+                self.state.select(None);
             }
         } else {
             self.nodes = Vec::new();
@@ -147,7 +150,7 @@ impl App {
 
                 // Determine git diff arguments
                 let mut args = vec!["diff", "--color=always"];
-                
+
                 // If staged, add --cached
                 // Check raw status:
                 // "A+" -> staged
@@ -157,41 +160,42 @@ impl App {
                 if node.raw_status.contains('+') {
                     args.push("--cached");
                 }
-                
+
                 // If untracked, git diff won't show anything unless we use --no-index /dev/null <file>
                 // Or just cat the file.
                 if node.raw_status == "??" {
-                     // For untracked, simpler to just reading the file
-                     // But let's try to keep it consistent.
-                     // A hack is to diff against /dev/null
-                     // But git diff --no-index /dev/null <file> works
-                     args.push("--no-index");
-                     args.push("/dev/null");
+                    // For untracked, simpler to just reading the file
+                    // But let's try to keep it consistent.
+                    // A hack is to diff against /dev/null
+                    // But git diff --no-index /dev/null <file> works
+                    args.push("--no-index");
+                    args.push("/dev/null");
                 }
-                
+
                 args.push(&node.full_path);
 
                 let output = Command::new("git").args(args).output()?;
-                
-                if output.status.success() || output.status.code() == Some(1) { // diff returns 1 if differences found
-                     let content = String::from_utf8_lossy(&output.stdout).to_string();
-                     if content.is_empty() && node.raw_status != "??" {
-                         self.diff_content = "(No diff or binary file)".to_string();
-                     } else {
-                         self.diff_content = content;
-                     }
-                     self.view_mode = ViewMode::Diff;
-                     self.diff_scroll = 0;
+
+                if output.status.success() || output.status.code() == Some(1) {
+                    // diff returns 1 if differences found
+                    let content = String::from_utf8_lossy(&output.stdout).to_string();
+                    if content.is_empty() && node.raw_status != "??" {
+                        self.diff_content = "(No diff or binary file)".to_string();
+                    } else {
+                        self.diff_content = content;
+                    }
+                    self.view_mode = ViewMode::Diff;
+                    self.diff_scroll = 0;
                 } else {
-                     let err = String::from_utf8_lossy(&output.stderr);
-                     self.diff_content = format!("Error running git diff: {}", err);
-                     self.view_mode = ViewMode::Diff;
+                    let err = String::from_utf8_lossy(&output.stderr);
+                    self.diff_content = format!("Error running git diff: {}", err);
+                    self.view_mode = ViewMode::Diff;
                 }
             }
         }
         Ok(())
     }
-    
+
     fn close_diff(&mut self) {
         self.view_mode = ViewMode::Tree;
         self.diff_content.clear();
@@ -243,7 +247,7 @@ impl App {
         if let Some(i) = self.state.selected() {
             if let Some(node) = self.nodes.get(i) {
                 if node.raw_status.contains('+') {
-                     // Unstage
+                    // Unstage
                     let status = Command::new("git")
                         .args(["restore", "--staged", &node.full_path])
                         .status()?;
@@ -252,9 +256,9 @@ impl App {
                     }
                 } else {
                     // Stage (add)
-                    // Skip if already staged removed (D+) - handled by contains(+) check above actually? 
+                    // Skip if already staged removed (D+) - handled by contains(+) check above actually?
                     // D+ contains +, so it goes to unstage block. git restore --staged works for D+.
-                    
+
                     let status = Command::new("git")
                         .args(["add", &node.full_path])
                         .status()?;
@@ -295,7 +299,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                         KeyCode::Char('j') | KeyCode::Down => app.scroll_diff(1),
                         KeyCode::Char('k') | KeyCode::Up => app.scroll_diff(-1),
                         _ => {}
-                    }
+                    },
                 }
             }
         }
@@ -305,15 +309,18 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
 fn ui(f: &mut ratatui::Frame, app: &mut App) {
     // If in diff mode, render diff popup
     if app.view_mode == ViewMode::Diff {
-         let area = f.size();
-         // Parse ANSI codes
-         let text = app.diff_content.into_text().unwrap_or_else(|_| ratatui::text::Text::raw(&app.diff_content));
-         
-         let paragraph = Paragraph::new(text)
+        let area = f.size();
+        // Parse ANSI codes
+        let text = app
+            .diff_content
+            .into_text()
+            .unwrap_or_else(|_| ratatui::text::Text::raw(&app.diff_content));
+
+        let paragraph = Paragraph::new(text)
             .block(Block::default().borders(Borders::ALL).title(" Diff "))
             .scroll((app.diff_scroll, 0));
-         f.render_widget(paragraph, area);
-         return;
+        f.render_widget(paragraph, area);
+        return;
     }
 
     let chunks = Layout::default()
@@ -353,14 +360,13 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         })
         .collect();
 
-    let title = format!(" git-twig interactive | Filter: {} ", app.filter_mode.as_str());
+    let title = format!(
+        " git-twig interactive | Filter: {} ",
+        app.filter_mode.as_str()
+    );
 
     let list = List::new(items)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(title),
-        )
+        .block(Block::default().borders(Borders::ALL).title(title))
         .highlight_style(
             Style::default()
                 .bg(Color::Rgb(50, 50, 50))

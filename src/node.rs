@@ -1,5 +1,7 @@
 use colored::*;
 use std::cmp::Ordering;
+use crate::theme::Theme;
+use crate::icons;
 
 #[derive(Debug, Clone)]
 pub enum NodeType {
@@ -62,7 +64,7 @@ impl Node {
         }
     }
 
-    fn format_name(&self) -> String {
+    fn format_name(&self, theme: &Theme) -> String {
         match &self.node_type {
             NodeType::Directory { .. } => self.name.bold().to_string(),
             NodeType::File { status, stats } => {
@@ -73,7 +75,14 @@ impl Node {
                     self.name.red()
                 };
 
-                let mut s = format!("{} ({})", color_name, status);
+                let icon = if theme.is_nerd {
+                    icons::get_icon(&self.name)
+                } else {
+                    theme.icon_file
+                };
+                
+                let s_base = format!("{}{}", icon, color_name);
+                let mut s = format!("{} ({})", s_base, status);
 
                 if let Some((added, deleted)) = stats {
                     let total = added + deleted;
@@ -99,8 +108,8 @@ impl Node {
 
                         let bar = format!(
                             "{}{}",
-                            "+".repeat(plus_chars).green(),
-                            "-".repeat(minus_chars).red()
+                            theme.diff_bar_char.to_string().repeat(plus_chars).green(),
+                            theme.diff_bar_char.to_string().repeat(minus_chars).red()
                         );
                         s.push_str(&format!(" | {} {}", total, bar));
                     }
@@ -110,17 +119,17 @@ impl Node {
         }
     }
 
-    pub fn render_tree(&self, indent: usize, collapse: bool) -> String {
+    pub fn render_tree(&self, indent: usize, collapse: bool, theme: &Theme) -> String {
         let mut out = String::new();
         // Root is usually "."
         // If we are root, we don't collapse ourselves generally (unless we are just a wrapper?).
         // Logic for root node behavior
         // Let's assume root is never collapsed.
 
-        out.push_str(&format!("{}\n", self.format_name()));
+        out.push_str(&format!("{}\n", self.format_name(theme)));
 
         if let NodeType::Directory { children } = &self.node_type {
-            self.render_children(children, indent, collapse, "", &mut out);
+            self.render_children(children, indent, collapse, "", &mut out, theme);
         }
         out
     }
@@ -132,6 +141,7 @@ impl Node {
         collapse: bool,
         prefix: &str,
         out: &mut String,
+        theme: &Theme,
     ) {
         let count = children.len();
         for (i, child) in children.iter().enumerate() {
@@ -157,8 +167,8 @@ impl Node {
             // and the children of "c".
 
             // Prepare the connector
-            let connector = if is_last { "└" } else { "├" };
-            let dashes = "─".repeat(indent - 2);
+            let connector = if is_last { theme.tree_end } else { theme.tree_branch };
+            let dashes = theme.tree_dash.to_string().repeat(indent - 2);
 
             // Print current child line
             out.push_str(&format!(
@@ -166,16 +176,14 @@ impl Node {
                 prefix,
                 connector,
                 dashes,
-                display_node.format_name()
+                display_node.format_name(theme)
             ));
 
             // Recurse if child is directory (and we have children to show)
             if let Some(recurs_children) = children_to_render {
-                let extension = if is_last { " " } else { "│" };
+                let extension = if is_last { " ".to_string() } else { theme.tree_vertical.to_string() };
                 let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent - 1));
-                // We recurse on the ORIGINAL logic's children?
-                // No, on the children of the display node.
-                self.render_children(recurs_children, indent, collapse, &new_prefix, out);
+                self.render_children(recurs_children, indent, collapse, &new_prefix, out, theme);
             }
         }
     }
@@ -213,7 +221,7 @@ impl Node {
         (self.clone(), None)
     }
 
-    pub fn flatten(&self, indent_size: usize, collapse: bool) -> Vec<FlatNode> {
+    pub fn flatten(&self, indent_size: usize, collapse: bool, theme: &Theme) -> Vec<FlatNode> {
         let mut flattened = Vec::new();
         // Add root
         flattened.push(FlatNode {
@@ -227,7 +235,7 @@ impl Node {
         });
 
         if let NodeType::Directory { children } = &self.node_type {
-            self.flatten_children(children, indent_size, collapse, "", &mut flattened);
+            self.flatten_children(children, indent_size, collapse, "", &mut flattened, theme);
         }
         flattened
     }
@@ -239,6 +247,7 @@ impl Node {
         collapse: bool,
         prefix: &str,
         out: &mut Vec<FlatNode>,
+        theme: &Theme,
     ) {
         let count = children.len();
         for (i, child) in children.iter().enumerate() {
@@ -256,12 +265,12 @@ impl Node {
             };
 
             // Prepare the connector
-            let connector_symbol = if is_last { "└" } else { "├" };
-            let dashes = "─".repeat(indent_size - 2);
+            let connector_symbol = if is_last { theme.tree_end } else { theme.tree_branch };
+            let dashes = theme.tree_dash.to_string().repeat(indent_size - 2);
             let full_connector = format!("{}{}{} ", prefix, connector_symbol, dashes);
 
             out.push(FlatNode {
-                name: display_node.get_display_name_clean(),
+                name: display_node.get_display_name_clean(theme),
                 full_path: display_node.full_path.clone(),
                 indent: 0, // Not strictly needed if we have full_connector
                 is_dir: display_node.is_dir(),
@@ -271,18 +280,23 @@ impl Node {
             });
 
             if let Some(recurs_children) = children_to_render {
-                let extension = if is_last { " " } else { "│" };
+                let extension = if is_last { " ".to_string() } else { theme.tree_vertical.to_string() };
                 let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent_size - 1));
-                self.flatten_children(recurs_children, indent_size, collapse, &new_prefix, out);
+                self.flatten_children(recurs_children, indent_size, collapse, &new_prefix, out, theme);
             }
         }
     }
 
-    pub fn get_display_name_clean(&self) -> String {
+    pub fn get_display_name_clean(&self, theme: &Theme) -> String {
+        let icon = match &self.node_type {
+            NodeType::Directory { .. } => theme.icon_dir,
+            NodeType::File { .. } => if theme.is_nerd { icons::get_icon(&self.name) } else { theme.icon_file },
+        };
+
         match &self.node_type {
-            NodeType::Directory { .. } => self.name.clone(),
+            NodeType::Directory { .. } => format!("{}{}", icon, self.name),
             NodeType::File { status, .. } => {
-                format!("{} ({})", self.name, status)
+                format!("{}{}{} ({})", icon, self.name, "", status) 
             }
         }
     }
@@ -306,26 +320,26 @@ impl Node {
         match &self.node_type {
             NodeType::File { status, .. } => status.clone(),
             NodeType::Directory { children } => {
-               if children.is_empty() {
-                   return String::new();
-               }
+                if children.is_empty() {
+                    return String::new();
+                }
 
-               let mut all_staged = true;
-               for child in children {
-                   let s = child.get_raw_status();
-                   // If any child is NOT staged (doesn't contain '+'), 
-                   // then the directory is not fully staged.
-                   if !s.contains('+') {
-                       all_staged = false;
-                       break;
-                   }
-               }
+                let mut all_staged = true;
+                for child in children {
+                    let s = child.get_raw_status();
+                    // If any child is NOT staged (doesn't contain '+'),
+                    // then the directory is not fully staged.
+                    if !s.contains('+') {
+                        all_staged = false;
+                        break;
+                    }
+                }
 
-               if all_staged {
-                   "M+".to_string()
-               } else {
-                   "M".to_string()
-               }
+                if all_staged {
+                    "M+".to_string()
+                } else {
+                    "M".to_string()
+                }
             }
         }
     }
@@ -346,26 +360,53 @@ mod tests {
         // Case 2: Mixed (one staged, one unstaged)
         let child3 = Node::new_file("c".to_string(), "c".to_string(), "M+".to_string(), None);
         let child4 = Node::new_file("d".to_string(), "d".to_string(), "M".to_string(), None); // Unstaged
-        let dir_mixed = Node::new_dir("dir_mixed".to_string(), "dir_mixed".to_string(), vec![child3, child4]);
+        let dir_mixed = Node::new_dir(
+            "dir_mixed".to_string(),
+            "dir_mixed".to_string(),
+            vec![child3, child4],
+        );
         assert_eq!(dir_mixed.get_raw_status(), "M");
 
         // Case 3: All unstaged
         let child5 = Node::new_file("e".to_string(), "e".to_string(), "??".to_string(), None);
-        let dir_unstaged = Node::new_dir("dir_unstaged".to_string(), "dir_unstaged".to_string(), vec![child5]);
+        let dir_unstaged = Node::new_dir(
+            "dir_unstaged".to_string(),
+            "dir_unstaged".to_string(),
+            vec![child5],
+        );
         assert_eq!(dir_unstaged.get_raw_status(), "M");
-        
+
         // Case 4: Recursive
-        let nested_dir = Node::new_dir("nested".to_string(), "nested".to_string(), vec![
-             Node::new_file("f".to_string(), "f".to_string(), "M".to_string(), None)
-        ]);
-        let parent_dir = Node::new_dir("parent".to_string(), "parent".to_string(), vec![nested_dir]);
+        let nested_dir = Node::new_dir(
+            "nested".to_string(),
+            "nested".to_string(),
+            vec![Node::new_file(
+                "f".to_string(),
+                "f".to_string(),
+                "M".to_string(),
+                None,
+            )],
+        );
+        let parent_dir =
+            Node::new_dir("parent".to_string(), "parent".to_string(), vec![nested_dir]);
         // nested child is M (unstaged), so nested is M. Parent sees M (no +), so parent is M.
         assert_eq!(parent_dir.get_raw_status(), "M");
-        
-        let nested_dir_staged = Node::new_dir("nested_s".to_string(), "nested_s".to_string(), vec![
-             Node::new_file("g".to_string(), "g".to_string(), "M+".to_string(), None)
-        ]);
-        let parent_dir_staged = Node::new_dir("parent_s".to_string(), "parent_s".to_string(), vec![nested_dir_staged]);
+
+        let nested_dir_staged = Node::new_dir(
+            "nested_s".to_string(),
+            "nested_s".to_string(),
+            vec![Node::new_file(
+                "g".to_string(),
+                "g".to_string(),
+                "M+".to_string(),
+                None,
+            )],
+        );
+        let parent_dir_staged = Node::new_dir(
+            "parent_s".to_string(),
+            "parent_s".to_string(),
+            vec![nested_dir_staged],
+        );
         // nested child is M+ (staged), so nested is M+. Parent sees M+ (has +), so parent is M+.
         assert_eq!(parent_dir_staged.get_raw_status(), "M+");
     }

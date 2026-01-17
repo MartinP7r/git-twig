@@ -5,6 +5,10 @@ use std::process::Command;
 mod interactive;
 mod node;
 mod parser;
+mod theme;
+mod icons;
+
+use crate::theme::{Theme, ThemeType};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -36,6 +40,10 @@ struct Args {
     /// Show only untracked files
     #[arg(long)]
     untracked_only: bool,
+
+    /// Visual theme (ascii, unicode, nerd)
+    #[arg(long, value_enum)]
+    theme: Option<ThemeType>,
 }
 
 fn get_git_config(key: &str) -> Option<String> {
@@ -73,26 +81,49 @@ fn determine_collapse(arg_collapse: bool) -> bool {
         .unwrap_or(false)
 }
 
+fn determine_theme(arg_theme: Option<ThemeType>) -> Theme {
+    if let Some(t) = arg_theme {
+        return Theme::new(t);
+    }
+    // Check config
+    if let Some(val) = get_git_config("twig.theme") {
+        match val.as_str() {
+            "unicode" => return Theme::unicode(),
+            "nerd" => return Theme::nerd(),
+            "ascii" => return Theme::ascii(),
+            _ => {}
+        }
+    }
+    // Default
+    Theme::ascii()
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
-    
+
     if args.interactive && args.open {
         anyhow::bail!("Cannot use both --interactive and --open");
     }
 
     let indent = determine_indent(args.indent);
     let collapse = determine_collapse(args.collapse);
+    let theme = determine_theme(args.theme);
 
     if args.interactive {
         // Interactive mode currently does not support filtering (not requested in roadmap yet)
-        return interactive::run(indent, collapse);
+        return interactive::run(indent, collapse, theme);
     }
 
-    let result_node = match build_tree_from_git(args.staged_only, args.modified_only, args.untracked_only, !args.open) {
+    let result_node = match build_tree_from_git(
+        args.staged_only,
+        args.modified_only,
+        args.untracked_only,
+        !args.open,
+    ) {
         Ok(Some(node)) => node,
         Ok(None) => {
             if !args.open {
-               println!("(working directory clean)");
+                println!("(working directory clean)");
             }
             return Ok(());
         }
@@ -101,36 +132,41 @@ fn main() -> Result<()> {
 
     if args.open {
         let files: Vec<String> = result_node
-            .flatten(indent, collapse)
+            .flatten(indent, collapse, &theme)
             .into_iter()
             .filter(|node| !node.is_dir)
             .map(|node| node.full_path)
             .collect();
-        
+
         if files.is_empty() {
             println!("No modified files to open.");
             return Ok(());
         }
 
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
-        
+
         let status = Command::new(&editor)
             .args(&files)
             .status()
             .with_context(|| format!("Failed to launch editor: {}", editor))?;
-        
+
         if !status.success() {
-           anyhow::bail!("Editor exited with error");
+            anyhow::bail!("Editor exited with error");
         }
         return Ok(());
     }
 
-    print!("{}", result_node.render_tree(indent, collapse));
+    print!("{}", result_node.render_tree(indent, collapse, &theme));
 
     Ok(())
 }
 
-pub fn build_tree_from_git(staged_only: bool, modified_only: bool, untracked_only: bool, print_header: bool) -> Result<Option<node::Node>> {
+pub fn build_tree_from_git(
+    staged_only: bool,
+    modified_only: bool,
+    untracked_only: bool,
+    print_header: bool,
+) -> Result<Option<node::Node>> {
     // Run git status --porcelain -b (to get branch info)
     let status_output = Command::new("git")
         .args(["status", "--porcelain", "-b"])
@@ -155,11 +191,11 @@ pub fn build_tree_from_git(staged_only: bool, modified_only: bool, untracked_onl
             let header = first.clone();
             // Remove header from lines to be processed by tree parser
             lines.remove(0);
-            
+
             if print_header {
                 print_context_header(&header);
             }
-            
+
             if lines.is_empty() {
                 if print_header {
                     println!("(working directory clean)");
@@ -174,7 +210,8 @@ pub fn build_tree_from_git(staged_only: bool, modified_only: bool, untracked_onl
     collect_diff_stats(&mut stats, &["diff", "--numstat"])?;
     collect_diff_stats(&mut stats, &["diff", "--cached", "--numstat"])?;
 
-    let result_node = parser::build_tree(lines, &stats, staged_only, modified_only, untracked_only)?;
+    let result_node =
+        parser::build_tree(lines, &stats, staged_only, modified_only, untracked_only)?;
     Ok(Some(result_node))
 }
 
@@ -182,57 +219,57 @@ fn print_context_header(line: &str) {
     // Format: ## <local>...<remote> [ahead <N>, behind <M>]
     // or: ## <local>
     // or: ## No commits yet on <local>
-    
+
     let content = line.trim_start_matches("## ").trim();
-    
+
     // Parse
     // 1. Check for "No commits yet on "
     if let Some(branch) = content.strip_prefix("No commits yet on ") {
         println!("On branch {} (No commits yet)", branch);
         return;
     }
-    
+
     // 2. Split by ... to find remote
     // "main...origin/main [ahead 1]"
     let (local_part, rest) = if let Some(idx) = content.find("...") {
-        (&content[..idx], Some(&content[idx+3..]))
+        (&content[..idx], Some(&content[idx + 3..]))
     } else {
         (content, None)
     };
-    
+
     // 3. Process rest (remote + counts)
     let (remote, counts) = if let Some(r) = rest {
-         if let Some(bracket_idx) = r.find(" [") {
-             (Some(&r[..bracket_idx]), Some(&r[bracket_idx..]))
-         } else {
-             (Some(r), None)
-         }
+        if let Some(bracket_idx) = r.find(" [") {
+            (Some(&r[..bracket_idx]), Some(&r[bracket_idx..]))
+        } else {
+            (Some(r), None)
+        }
     } else {
         (None, None)
     };
-    
+
     print!("On branch \x1b[1m{}\x1b[0m", local_part);
-    
+
     if let Some(remote_name) = remote {
         print!(" -> {}", remote_name);
     }
-    
+
     if let Some(counts_str) = counts {
         // [ahead 1, behind 2] or [ahead 1]
         let stripped = counts_str.trim_matches(|c| c == '[' || c == ']');
         let parts: Vec<&str> = stripped.split(", ").collect();
-        
+
         for part in parts {
             if let Some(ahead) = part.strip_prefix("ahead ") {
-                 print!(" \x1b[32m⬆️ {}\x1b[0m", ahead);
+                print!(" \x1b[32m⬆️ {}\x1b[0m", ahead);
             } else if let Some(behind) = part.strip_prefix("behind ") {
-                 print!(" \x1b[31m⬇️ {}\x1b[0m", behind);
+                print!(" \x1b[31m⬇️ {}\x1b[0m", behind);
             } else if part == "gone" {
-                 print!(" \x1b[31m(gone)\x1b[0m");
+                print!(" \x1b[31m(gone)\x1b[0m");
             }
         }
     }
-    
+
     println!(); // Newline
 }
 
