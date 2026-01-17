@@ -279,7 +279,7 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                         KeyCode::Char('q') => return Ok(()),
                         KeyCode::Char('j') | KeyCode::Down => app.next(),
                         KeyCode::Char('k') | KeyCode::Up => app.previous(),
-                        KeyCode::Char(' ') => {
+                        KeyCode::Char('s') | KeyCode::Char(' ') => {
                             let _ = app.toggle_stage();
                         }
                         KeyCode::Char('f') => {
