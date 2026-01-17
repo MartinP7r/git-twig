@@ -165,11 +165,13 @@ impl App {
                 }
 
                 // Calculate width
-                self.max_name_width = self.unified_nodes.iter()
+                self.max_name_width = self
+                    .unified_nodes
+                    .iter()
                     .map(|n| n.connector.chars().count() + n.name.chars().count())
                     .max()
                     .unwrap_or(0);
-                
+
                 // Adjust selection
                 Self::adjust_selection(&self.unified_nodes, &mut self.unified_state, true);
             }
@@ -186,23 +188,28 @@ impl App {
                 let all_tree = build_tree_from_git(false, false, false, false)?;
                 if let Some(root) = all_tree {
                     let all = root.flatten(self.indent_size, self.collapse, &self.theme);
-                    self.unstaged_nodes = all.into_iter().filter(|n| {
-                        !n.raw_status.ends_with('+')
-                    }).collect();
+                    self.unstaged_nodes = all
+                        .into_iter()
+                        .filter(|n| !n.raw_status.ends_with('+'))
+                        .collect();
                 } else {
                     self.unstaged_nodes = Vec::new();
                 }
 
                 // Calculate max width across BOTH lists for consistent alignment
-                let max_staged = self.staged_nodes.iter()
+                let max_staged = self
+                    .staged_nodes
+                    .iter()
                     .map(|n| n.connector.chars().count() + n.name.chars().count())
                     .max()
                     .unwrap_or(0);
-                let max_unstaged = self.unstaged_nodes.iter()
+                let max_unstaged = self
+                    .unstaged_nodes
+                    .iter()
                     .map(|n| n.connector.chars().count() + n.name.chars().count())
                     .max()
                     .unwrap_or(0);
-                
+
                 self.max_name_width = max_staged.max(max_unstaged);
 
                 // Adjust selections
@@ -210,7 +217,11 @@ impl App {
                 Self::adjust_selection(&self.staged_nodes, &mut self.staged_state, staged_active);
 
                 let unstaged_active = self.focus == Focus::Unstaged;
-                Self::adjust_selection(&self.unstaged_nodes, &mut self.unstaged_state, unstaged_active);
+                Self::adjust_selection(
+                    &self.unstaged_nodes,
+                    &mut self.unstaged_state,
+                    unstaged_active,
+                );
             }
         }
         Ok(())
@@ -482,7 +493,10 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                 .constraints([Constraint::Min(0), Constraint::Length(3)])
                 .split(f.size());
 
-            let title = format!(" git-twig interactive | Filter: {} ", app.filter_mode.as_str());
+            let title = format!(
+                " git-twig interactive | Filter: {} ",
+                app.filter_mode.as_str()
+            );
             render_list(
                 f,
                 &app.theme,
@@ -551,7 +565,7 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
             );
 
             // --- Help for Split ---
-             let help_text = vec![
+            let help_text = vec![
                 ratatui::text::Span::raw(" [Tab]"),
                 ratatui::text::Span::styled(" Switch Pane", Style::default().fg(Color::Yellow)),
                 ratatui::text::Span::raw("  [j/k]"),
