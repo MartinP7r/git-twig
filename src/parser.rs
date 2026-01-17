@@ -33,7 +33,12 @@ pub fn parse_status_line(line: &str) -> Option<(String, String)> {
     Some((rest.to_string(), status))
 }
 
-pub fn build_tree(lines: Vec<String>, stats: &HashMap<String, (usize, usize)>) -> Result<Node> {
+pub fn build_tree(
+    lines: Vec<String>,
+    stats: &HashMap<String, (usize, usize)>,
+    staged_only: bool,
+    modified_only: bool,
+) -> Result<Node> {
     let mut root = BuilderNode {
         name: ".".to_string(),
         full_path: ".".to_string(),
@@ -44,6 +49,16 @@ pub fn build_tree(lines: Vec<String>, stats: &HashMap<String, (usize, usize)>) -
 
     for line in lines {
         if let Some((path_str, status)) = parse_status_line(&line) {
+            // Filter logic
+            if staged_only && !status.ends_with('+') {
+                continue;
+            }
+            // "modified_only" means hide untracked (??)
+            // status for untracked is "??"
+            if modified_only && status == "??" {
+                continue;
+            }
+
             // Handle rename special display
             // If status has 'R' and path has " -> ", we need to split
             let (effective_path, display_name) =
@@ -230,10 +245,66 @@ mod tests {
         );
     }
 
+    use crate::node::NodeType;
+
     #[test]
     fn test_parse_short_line() {
         assert_eq!(parse_status_line(""), None);
         assert_eq!(parse_status_line("M"), None);
         assert_eq!(parse_status_line("M  "), None); // len 3
+    }
+
+    #[test]
+    fn test_build_tree_filtering_staged() {
+        let lines = vec![
+            "M  staged.txt".to_string(), // M+
+            " M unstaged.txt".to_string(), // M
+        ];
+        let stats = HashMap::new();
+        
+        // Filter staged only
+        let node = build_tree(lines.clone(), &stats, true, false).unwrap();
+        // Should only contain staged.txt
+        if let NodeType::Directory { children } = node.node_type {
+            assert_eq!(children.len(), 1);
+            assert!(children.iter().any(|c| c.name == "staged.txt"));
+        } else {
+            panic!("Root should be a directory");
+        }
+        
+        // No filter
+        let node = build_tree(lines, &stats, false, false).unwrap();
+        if let NodeType::Directory { children } = node.node_type {
+            assert_eq!(children.len(), 2);
+        } else {
+            panic!("Root should be a directory");
+        }
+    }
+
+    #[test]
+    fn test_build_tree_filtering_modified() {
+        let lines = vec![
+            "?? untracked.txt".to_string(),
+            " M modified.txt".to_string(),
+        ];
+        let stats = HashMap::new();
+        
+        // Filter modified only (hide untracked)
+        let node = build_tree(lines.clone(), &stats, false, true).unwrap();
+        
+        if let NodeType::Directory { children } = node.node_type {
+            assert_eq!(children.len(), 1);
+            assert!(children.iter().any(|c| c.name == "modified.txt"));
+        } else {
+            panic!("Root should be a directory");
+        }
+        
+        // No filter
+        let node = build_tree(lines, &stats, false, false).unwrap();
+        if let NodeType::Directory { children } = node.node_type {
+            assert_eq!(children.len(), 2);
+        } else {
+            panic!("Root should be a directory");
+        }
     }
 }

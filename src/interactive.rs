@@ -62,7 +62,7 @@ impl App {
     }
 
     fn refresh(&mut self) -> Result<()> {
-        let tree = build_tree_from_git()?;
+        let tree = build_tree_from_git(false, false)?;
         if let Some(root) = tree {
             self.nodes = root.flatten(self.indent_size, self.collapse);
             if self.state.selected().is_none() && !self.nodes.is_empty() {
