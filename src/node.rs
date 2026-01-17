@@ -84,116 +84,65 @@ impl Node {
                 let s_base = format!("{}{}", icon, color_name);
                 let mut s = format!("{} ({})", s_base, status);
 
-                if let Some((added, deleted)) = stats {
-                    let total = added + deleted;
-                    if total > 0 {
-                        // Visual bar logic
-                        // Example: | 5 +++--
-                        // Scale? If total is huge, we cap the bar length?
-                        // Let's assume max bar width of 5-10 chars.
-                        let max_width = 10;
-
-                        // Calculate ratio of + to -
-                        // If total > max, we scale down.
-                        // f64 ops might be overkill but safest.
-
-                        let (plus_chars, minus_chars) = if total <= max_width {
-                            (*added, *deleted)
-                        } else {
-                            let ratio = *added as f64 / total as f64;
-                            let p = (ratio * max_width as f64).round() as usize;
-                            let m = max_width - p;
-                            (p, m)
-                        };
-
-                        let bar = format!(
-                            "{}{}",
-                            theme.diff_bar_plus.to_string().repeat(plus_chars).green(),
-                            theme.diff_bar_minus.to_string().repeat(minus_chars).red()
-                        );
-                        s.push_str(&format!(" | {} {}", total, bar));
-                    }
-                }
                 s
             }
         }
     }
 
     pub fn render_tree(&self, indent: usize, collapse: bool, theme: &Theme) -> String {
+        let flattened = self.flatten(indent, collapse, theme);
+
+        // Calculate max width for alignment
+        // We consider the length of "connector + name"
+        // We assume name.chars().count() is visual width (which is true for ascii/clean unicode without color)
+        let max_width = flattened
+            .iter()
+            .map(|n| n.connector.chars().count() + n.name.chars().count())
+            .max()
+            .unwrap_or(0);
+
         let mut out = String::new();
-        // Root is usually "."
-        // If we are root, we don't collapse ourselves generally (unless we are just a wrapper?).
-        // Logic for root node behavior
-        // Let's assume root is never collapsed.
 
-        out.push_str(&format!("{}\n", self.format_name(theme)));
+        for node in flattened {
+            let width = node.connector.chars().count() + node.name.chars().count();
+            let padding = if max_width > width {
+                " ".repeat(max_width - width)
+            } else {
+                String::new()
+            };
 
-        if let NodeType::Directory { children } = &self.node_type {
-            self.render_children(children, indent, collapse, "", &mut out, theme);
+            let stats_bar = if let Some((added, deleted)) = node.stats {
+                let total = added + deleted;
+                if total > 0 {
+                    let max_bar_width = 10;
+                    let (plus_chars, minus_chars) = if total <= max_bar_width {
+                        (added, deleted)
+                    } else {
+                        let ratio = added as f64 / total as f64;
+                        let p = (ratio * max_bar_width as f64).round() as usize;
+                        let m = max_bar_width - p;
+                        (p, m)
+                    };
+
+                    format!(
+                        " | {} {}{}",
+                        total,
+                        theme.diff_bar_plus.to_string().repeat(plus_chars).green(),
+                        theme.diff_bar_minus.to_string().repeat(minus_chars).red()
+                    )
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+
+            out.push_str(&format!(
+                "{}{}{}{}\n",
+                node.connector, node.name_colored, padding, stats_bar
+            ));
         }
         out
-    }
-
-    fn render_children(
-        &self,
-        children: &[Node],
-        indent: usize,
-        collapse: bool,
-        prefix: &str,
-        out: &mut String,
-        theme: &Theme,
-    ) {
-        let count = children.len();
-        for (i, child) in children.iter().enumerate() {
-            let is_last = i == count - 1;
-
-            // Check for collapsing
-            // If collapse is ON, and child is collapsible (Dir containing 1 Dir),
-            // then we should effectively "skip" printing the connector for the child,
-            // and instead print the collapsed chain.
-
-            let (display_node, _effective_children) = if collapse {
-                child.get_collapsed_view()
-            } else {
-                (child.clone(), None)
-            };
-
-            let children_to_render = match &display_node.node_type {
-                NodeType::Directory { children } => Some(children),
-                _ => None,
-            };
-            // Note: effective_children might be the children of the bottom-most collapsed node.
-            // But get_collapsed_view should return a synthetic Node that has the name "a/b/c"
-            // and the children of "c".
-
-            // Prepare the connector
-            let connector = if is_last {
-                theme.tree_end
-            } else {
-                theme.tree_branch
-            };
-            let dashes = theme.tree_dash.to_string().repeat(indent - 2);
-
-            // Print current child line
-            out.push_str(&format!(
-                "{}{}{} {}\n",
-                prefix,
-                connector,
-                dashes,
-                display_node.format_name(theme)
-            ));
-
-            // Recurse if child is directory (and we have children to show)
-            if let Some(recurs_children) = children_to_render {
-                let extension = if is_last {
-                    " ".to_string()
-                } else {
-                    theme.tree_vertical.to_string()
-                };
-                let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent - 1));
-                self.render_children(recurs_children, indent, collapse, &new_prefix, out, theme);
-            }
-        }
     }
 
     // Returns (NewNode, Option<OriginalChildren>)
@@ -233,13 +182,15 @@ impl Node {
         let mut flattened = Vec::new();
         // Add root
         flattened.push(FlatNode {
-            name: self.name.clone(),
+            name: self.get_display_name_clean(theme),
+            name_colored: self.format_name(theme),
             full_path: self.full_path.clone(),
             indent: 0,
             is_dir: self.is_dir(),
             status: self.get_status_char(),
             raw_status: self.get_raw_status(),
             connector: String::new(),
+            stats: self.get_stats(),
         });
 
         if let NodeType::Directory { children } = &self.node_type {
@@ -283,12 +234,14 @@ impl Node {
 
             out.push(FlatNode {
                 name: display_node.get_display_name_clean(theme),
+                name_colored: display_node.format_name(theme),
                 full_path: display_node.full_path.clone(),
                 indent: 0, // Not strictly needed if we have full_connector
                 is_dir: display_node.is_dir(),
                 status: display_node.get_status_char(),
                 raw_status: display_node.get_raw_status(),
                 connector: full_connector,
+                stats: display_node.get_stats(),
             });
 
             if let Some(recurs_children) = children_to_render {
@@ -372,6 +325,12 @@ impl Node {
             }
         }
     }
+    pub fn get_stats(&self) -> Option<(usize, usize)> {
+        match &self.node_type {
+            NodeType::File { stats, .. } => *stats,
+            NodeType::Directory { .. } => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -444,10 +403,12 @@ mod tests {
 #[derive(Debug, Clone)]
 pub struct FlatNode {
     pub name: String,
+    pub name_colored: String,
     pub full_path: String,
     pub indent: usize,
     pub is_dir: bool,
     pub status: char,
     pub raw_status: String,
     pub connector: String,
+    pub stats: Option<(usize, usize)>,
 }
