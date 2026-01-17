@@ -169,7 +169,7 @@ pub fn build_tree_from_git(
 ) -> Result<Option<node::Node>> {
     // Run git status --porcelain -b (to get branch info)
     let status_output = Command::new("git")
-        .args(["status", "--porcelain", "-b"])
+        .args(["status", "--porcelain", "-b", "-u"])
         .output()
         .context("Failed to execute git status")?;
 
