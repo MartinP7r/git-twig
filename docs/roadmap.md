@@ -17,12 +17,12 @@ Focus: Providing immediate context to the user before they commit.
 Focus: Transforming the tool from a viewer into an actionable workflow step.
 
 - [x] **CI Automation**: GitHub Action to run `cargo test` on every PR (separate from release).
-- [/] **Interactive Mode (TUI)**
+- [x] **Interactive Mode (TUI)**
     - [x] Navigate the tree with arrow keys or **Vim bindings** (`h`, `j`, `k`, `l`).
-    - Toggle staging (`git add`/`reset`) for **files and whole folders** with `<Space>` (unified toggle).
-    - View diffs inline with `<Enter>` (with syntax highlighting).
-- [ ] **Editor Integration**
-    - Flag `--open` (or `-o`) to open all modified files in `$EDITOR`.
+    - [x] Toggle staging (`git add`/`reset`) for **files and whole folders** with `<Space>` (unified toggle).
+    - [x] View diffs inline with `<Enter>` (with syntax highlighting).
+- [x] **Editor Integration**
+    - [x] Flag `--open` (or `-o`) to open all modified files in `$EDITOR`.
 
 ## Visual Polish & Theming
 Focus: Making the tool look modern and customizable ("git-twig").
