@@ -373,10 +373,8 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
     let help_text = vec![
         ratatui::text::Span::raw(" [j/k]"),
         ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
-        ratatui::text::Span::raw("  [Space]"),
-        ratatui::text::Span::styled(" Stage", Style::default().fg(Color::Green)),
-        ratatui::text::Span::raw("  [u]"),
-        ratatui::text::Span::styled(" Unstage", Style::default().fg(Color::Red)),
+        ratatui::text::Span::raw("  [Space/s]"),
+        ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
         ratatui::text::Span::raw("  [f]"),
         ratatui::text::Span::styled(" Filter", Style::default().fg(Color::Yellow)),
         ratatui::text::Span::raw("  [Enter]"),
