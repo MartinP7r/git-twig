@@ -67,7 +67,7 @@ impl Node {
     fn format_name(&self, theme: &Theme) -> String {
         match &self.node_type {
             NodeType::Directory { .. } => self.name.bold().to_string(),
-            NodeType::File { status, stats } => {
+            NodeType::File { status, stats: _ } => {
                 let staged = status.contains('+');
                 let color_name = if staged {
                     self.name.green()
@@ -82,7 +82,7 @@ impl Node {
                 };
 
                 let s_base = format!("{}{}", icon, color_name);
-                let mut s = format!("{} ({})", s_base, status);
+                let s = format!("{} ({})", s_base, status);
 
                 s
             }
