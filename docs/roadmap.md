@@ -32,8 +32,8 @@ Focus: Making the tool look modern and customizable ("git-twig").
     - `unicode`: Rounded corners (`╰──`), Block diff bars (`◼◼◼◻`).
     - `nerd`: Full icons for files/folders and status glyphs.
 - [ ] **Semantic Icons**: Support file-type icons or nerd-font ligatures (e.g. 🦀 for Rust, 💎 for Ruby) and folder icons (⚙️ for `config`).
-- [ ] **Compact Paths**: Flatten empty directory chains (e.g., `src/main/java...` on one line) to reduce nesting noise.
-- [ ] **Vertical Alignment**: Align diff stats separator (`|`) vertically across all rows.
+- [x] **Compact Paths**: Flatten empty directory chains (e.g., `src/main/java...` on one line) to reduce nesting noise.
+- [x] **Vertical Alignment**: Align diff stats separator (`|`) vertically across all rows.
 - [ ] **High-Res Diff Bars**: Implement Unicode block element rendering.
 - [x] **Rename Config Keys**: Migrate from `status-tree.*` to `twig.*` (e.g. `twig.collapse`).
 - [x] **Brand Identity**: Design logo and assets.
