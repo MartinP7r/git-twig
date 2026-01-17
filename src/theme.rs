@@ -52,8 +52,8 @@ impl Theme {
             tree_dash: '─',
             icon_dir: "📁 ", // Unicode folder? Or just empty? Roadmap says Unicode has smoother lines.
             icon_file: "",
-            diff_bar_plus: '█',
-            diff_bar_minus: '█',
+            diff_bar_plus: '◼',
+            diff_bar_minus: '◼',
             is_nerd: false,
         }
     }
@@ -66,8 +66,8 @@ impl Theme {
             tree_dash: '─',
             icon_dir: " ",
             icon_file: " ",
-            diff_bar_plus: '█',
-            diff_bar_minus: '█',
+            diff_bar_plus: '◼',
+            diff_bar_minus: '◼',
             is_nerd: true,
         }
     }
