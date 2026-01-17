@@ -24,26 +24,16 @@ use crate::node::FlatNode;
 use crate::theme::Theme;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum FilterMode {
-    All,
-    Modified, // Hides untracked
-    Staged,   // Shows only staged
+enum Focus {
+    Staged,
+    Unstaged,
 }
 
-impl FilterMode {
+impl Focus {
     fn next(&self) -> Self {
         match self {
-            FilterMode::All => FilterMode::Modified,
-            FilterMode::Modified => FilterMode::Staged,
-            FilterMode::Staged => FilterMode::All,
-        }
-    }
-
-    fn as_str(&self) -> &'static str {
-        match self {
-            FilterMode::All => "All",
-            FilterMode::Modified => "Modified",
-            FilterMode::Staged => "Staged",
+            Focus::Staged => Focus::Unstaged,
+            Focus::Unstaged => Focus::Staged,
         }
     }
 }
@@ -78,9 +68,11 @@ pub fn run(indent: usize, collapse: bool, theme: Theme) -> Result<()> {
 struct App {
     indent_size: usize,
     collapse: bool,
-    nodes: Vec<FlatNode>,
-    state: ListState,
-    filter_mode: FilterMode,
+    staged_nodes: Vec<FlatNode>,
+    unstaged_nodes: Vec<FlatNode>,
+    staged_state: ListState,
+    unstaged_state: ListState,
+    focus: Focus,
     view_mode: ViewMode,
     diff_content: String,
     diff_scroll: u16,
@@ -93,9 +85,11 @@ impl App {
         let mut app = App {
             indent_size,
             collapse,
-            nodes: Vec::new(),
-            state: ListState::default(),
-            filter_mode: FilterMode::All,
+            staged_nodes: Vec::new(),
+            unstaged_nodes: Vec::new(),
+            staged_state: ListState::default(),
+            unstaged_state: ListState::default(),
+            focus: Focus::Unstaged, // Start in Unstaged usually
             view_mode: ViewMode::Tree,
             diff_content: String::new(),
             diff_scroll: 0,
@@ -107,52 +101,96 @@ impl App {
     }
 
     fn refresh(&mut self) -> Result<()> {
-        let (staged, modified) = match self.filter_mode {
-            FilterMode::All => (false, false),
-            FilterMode::Modified => (false, true),
-            FilterMode::Staged => (true, false),
-        };
-
-        let tree = build_tree_from_git(staged, modified, false, false)?;
-        if let Some(root) = tree {
-            self.nodes = root.flatten(self.indent_size, self.collapse, &self.theme);
-
-            self.max_name_width = self
-                .nodes
-                .iter()
-                .map(|n| n.connector.chars().count() + n.name.chars().count())
-                .max()
-                .unwrap_or(0);
-
-            // Adjust selection if out of bounds
-            if let Some(selected) = self.state.selected() {
-                if selected >= self.nodes.len() {
-                    if !self.nodes.is_empty() {
-                        self.state.select(Some(self.nodes.len() - 1));
-                    } else {
-                        self.state.select(None);
-                    }
-                }
-            } else if !self.nodes.is_empty() {
-                self.state.select(Some(0));
-            } else {
-                self.state.select(None);
-            }
+        // 1. Fetch Staged
+        let staged_tree = build_tree_from_git(true, false, false, false)?;
+        if let Some(root) = staged_tree {
+            self.staged_nodes = root.flatten(self.indent_size, self.collapse, &self.theme);
         } else {
-            self.nodes = Vec::new();
-            self.state.select(None);
+            self.staged_nodes = Vec::new();
         }
+
+        // 2. Fetch All (Unstaged + Untracked + Staged-mixed)
+        // We fetch "All" (false, false, false) which includes everything.
+        // Then we filter out nodes that are PURELY staged (status == "+").
+        // "M+" (mixed) should remain in Unstaged view because it has unstaged changes.
+        // "??" (untracked) should remain.
+        // "M" (modified) should remain.
+        let all_tree = build_tree_from_git(false, false, false, false)?;
+        if let Some(root) = all_tree {
+            let all = root.flatten(self.indent_size, self.collapse, &self.theme);
+            self.unstaged_nodes = all
+                .into_iter()
+                .filter(|n| {
+                    // Keep if NOT purely staged (which ends with + in our parser)
+                    !n.raw_status.ends_with('+')
+                })
+                .collect();
+        } else {
+            self.unstaged_nodes = Vec::new();
+        }
+
+        // Calculate max width across BOTH lists for consistent alignment
+        let max_staged = self
+            .staged_nodes
+            .iter()
+            .map(|n| n.connector.chars().count() + n.name.chars().count())
+            .max()
+            .unwrap_or(0);
+        let max_unstaged = self
+            .unstaged_nodes
+            .iter()
+            .map(|n| n.connector.chars().count() + n.name.chars().count())
+            .max()
+            .unwrap_or(0);
+
+        self.max_name_width = max_staged.max(max_unstaged);
+
+        // Adjust selections
+        let staged_active = self.focus == Focus::Staged;
+        Self::adjust_selection(&self.staged_nodes, &mut self.staged_state, staged_active);
+
+        let unstaged_active = self.focus == Focus::Unstaged;
+        Self::adjust_selection(
+            &self.unstaged_nodes,
+            &mut self.unstaged_state,
+            unstaged_active,
+        );
+
         Ok(())
     }
 
-    fn toggle_filter(&mut self) -> Result<()> {
-        self.filter_mode = self.filter_mode.next();
-        self.refresh()
+    fn adjust_selection(nodes: &[FlatNode], state: &mut ListState, is_active: bool) {
+        if let Some(selected) = state.selected() {
+            if selected >= nodes.len() {
+                if !nodes.is_empty() {
+                    state.select(Some(nodes.len() - 1));
+                } else {
+                    state.select(None);
+                }
+            }
+        } else if !nodes.is_empty() && is_active {
+            // If we just got items and we are active, select 0
+            state.select(Some(0));
+        } else if !nodes.is_empty() && state.selected().is_none() {
+            // Ensure at least 0 is selected if not empty
+            state.select(Some(0));
+        } else if nodes.is_empty() {
+            state.select(None);
+        }
+    }
+
+    fn toggle_focus(&mut self) {
+        self.focus = self.focus.next();
     }
 
     fn show_diff(&mut self) -> Result<()> {
-        if let Some(i) = self.state.selected() {
-            if let Some(node) = self.nodes.get(i) {
+        let (nodes, state) = match self.focus {
+            Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+            Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+        };
+
+        if let Some(i) = state.selected() {
+            if let Some(node) = nodes.get(i) {
                 if node.is_dir {
                     return Ok(());
                 }
@@ -219,12 +257,17 @@ impl App {
     }
 
     fn next(&mut self) {
-        if self.nodes.is_empty() {
+        let (nodes, state) = match self.focus {
+            Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+            Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+        };
+
+        if nodes.is_empty() {
             return;
         }
-        let i = match self.state.selected() {
+        let i = match state.selected() {
             Some(i) => {
-                if i >= self.nodes.len() - 1 {
+                if i >= nodes.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -232,29 +275,39 @@ impl App {
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        state.select(Some(i));
     }
 
     fn previous(&mut self) {
-        if self.nodes.is_empty() {
+        let (nodes, state) = match self.focus {
+            Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+            Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+        };
+
+        if nodes.is_empty() {
             return;
         }
-        let i = match self.state.selected() {
+        let i = match state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.nodes.len() - 1
+                    nodes.len() - 1
                 } else {
                     i - 1
                 }
             }
             None => 0,
         };
-        self.state.select(Some(i));
+        state.select(Some(i));
     }
 
     fn toggle_stage(&mut self) -> Result<()> {
-        if let Some(i) = self.state.selected() {
-            if let Some(node) = self.nodes.get(i) {
+        let (nodes, state) = match self.focus {
+            Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+            Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+        };
+
+        if let Some(i) = state.selected() {
+            if let Some(node) = nodes.get(i) {
                 if node.raw_status.contains('+') {
                     // Unstage
                     let status = Command::new("git")
@@ -264,10 +317,7 @@ impl App {
                         self.refresh()?;
                     }
                 } else {
-                    // Stage (add)
-                    // Skip if already staged removed (D+) - handled by contains(+) check above actually?
-                    // D+ contains +, so it goes to unstage block. git restore --staged works for D+.
-
+                    // Stage
                     let status = Command::new("git")
                         .args(["add", &node.full_path])
                         .status()?;
@@ -295,8 +345,8 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                         KeyCode::Char('s') | KeyCode::Char(' ') => {
                             let _ = app.toggle_stage();
                         }
-                        KeyCode::Char('f') => {
-                            let _ = app.toggle_filter();
+                        KeyCode::Char('f') | KeyCode::Tab => {
+                            app.toggle_focus();
                         }
                         KeyCode::Enter => {
                             let _ = app.show_diff();
@@ -334,14 +384,69 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(3)])
+        .constraints([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+            Constraint::Length(3),
+        ])
         .split(f.size());
 
-    let theme = &app.theme;
-    let max_name_width = app.max_name_width;
+    // --- Staged List (Top) ---
+    render_list(
+        f,
+        &app.theme,
+        app.max_name_width,
+        &app.staged_nodes,
+        &mut app.staged_state,
+        chunks[0],
+        " Staged Changes ",
+        Focus::Staged,
+        app.focus,
+    );
 
-    let items: Vec<ListItem> = app
-        .nodes
+    // --- Unstaged List (Bottom) ---
+    render_list(
+        f,
+        &app.theme,
+        app.max_name_width,
+        &app.unstaged_nodes,
+        &mut app.unstaged_state,
+        chunks[1],
+        " Unstaged Changes ",
+        Focus::Unstaged,
+        app.focus,
+    );
+
+    // --- Help ---
+    let help_text = vec![
+        ratatui::text::Span::raw(" [Tab]"),
+        ratatui::text::Span::styled(" Switch Pane", Style::default().fg(Color::Yellow)),
+        ratatui::text::Span::raw("  [j/k]"),
+        ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
+        ratatui::text::Span::raw("  [Space]"),
+        ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
+        ratatui::text::Span::raw("  [Enter]"),
+        ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
+        ratatui::text::Span::raw("  [q]"),
+        ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
+    ];
+    let help = Paragraph::new(Line::from(help_text))
+        .block(Block::default().borders(Borders::ALL).title(" Help "));
+    f.render_widget(help, chunks[2]);
+}
+
+fn render_list(
+    f: &mut ratatui::Frame,
+    theme: &Theme,
+    max_name_width: usize,
+    nodes: &[FlatNode],
+    state: &mut ListState,
+    area: ratatui::layout::Rect,
+    title: &str,
+    target_focus: Focus,
+    current_focus: Focus,
+) {
+    let items: Vec<ListItem> = nodes
         .iter()
         .map(|node| {
             let status_indicator = if node.status == '+' {
@@ -410,13 +515,19 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         })
         .collect();
 
-    let title = format!(
-        " git-twig interactive | Filter: {} ",
-        app.filter_mode.as_str()
-    );
+    let border_style = if current_focus == target_focus {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default()
+    };
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title(title))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(title)
+                .border_style(border_style),
+        )
         .highlight_style(
             Style::default()
                 .bg(Color::Rgb(50, 50, 50))
@@ -424,43 +535,7 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         )
         .highlight_symbol(">> ");
 
-    f.render_stateful_widget(list, chunks[0], &mut app.state);
+    f.render_stateful_widget(list, area, state);
 
-    let help_text = vec![
-        ratatui::text::Span::raw(" [j/k]"),
-        ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
-        ratatui::text::Span::raw("  [Space/s]"),
-        ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
-        ratatui::text::Span::raw("  [f]"),
-        ratatui::text::Span::styled(" Filter", Style::default().fg(Color::Yellow)),
-        ratatui::text::Span::raw("  [Enter]"),
-        ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
-        ratatui::text::Span::raw("  [q]"),
-        ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
-    ];
-    let help = Paragraph::new(Line::from(help_text))
-        .block(Block::default().borders(Borders::ALL).title(" Help "));
-    f.render_widget(help, chunks[1]);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_filter_mode_transitions() {
-        let mode = FilterMode::All;
-        assert_eq!(mode.as_str(), "All");
-
-        let mode = mode.next();
-        assert_eq!(mode, FilterMode::Modified);
-        assert_eq!(mode.as_str(), "Modified");
-
-        let mode = mode.next();
-        assert_eq!(mode, FilterMode::Staged);
-        assert_eq!(mode.as_str(), "Staged");
-
-        let mode = mode.next();
-        assert_eq!(mode, FilterMode::All);
-    }
+    // Tests removed as FilterMode is deleted
 }

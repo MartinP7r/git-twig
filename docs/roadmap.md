@@ -27,7 +27,7 @@ Focus: Transforming the tool from a viewer into an actionable workflow step.
 ## Visual Polish & Theming
 Focus: Making the tool look modern and customizable ("git-twig").
 
-- [ ] **Configurable Themes**: Support `--theme` flag.
+- [x] **Configurable Themes**: Support `--theme` flag.
     - `ascii`: Default/Safe.
     - `unicode`: Rounded corners (`╰──`), Block diff bars (`◼◼◼◻`).
     - `nerd`: Full icons for files/folders and status glyphs.
