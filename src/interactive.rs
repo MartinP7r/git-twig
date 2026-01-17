@@ -3,6 +3,7 @@ use std::{
     process::Command,
 };
 
+use ansi_to_tui::IntoText;
 use anyhow::Result;
 use crossterm::{
     event::{self, Event, KeyCode},
@@ -145,7 +146,7 @@ impl App {
                 }
 
                 // Determine git diff arguments
-                let mut args = vec!["diff", "--no-color"];
+                let mut args = vec!["diff", "--color=always"];
                 
                 // If staged, add --cached
                 // Check raw status:
@@ -305,18 +306,10 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
     // If in diff mode, render diff popup
     if app.view_mode == ViewMode::Diff {
          let area = f.size();
-         // Simple parsing of ANSI codes
-         // Ratatui Text::from can parse ANSI if enabled or we use a crate like `ansi-to-tui`
-         // Standard `Text::from(string)` does NOT parse ANSI sequences, it displays them as esc chars.
-         // We'll strip ANSI for now to be safe, unless we add a dep.
-         // Or use `ratatui::text::Text::from_ansi`?
-         // Checking ratatui docs (v0.29): Text::from(String) doesn't.
-         // But there is `ratatui::text::Text::from(an_ansi_string)`. Wait, no.
-         // For now, let's just strip ANSI to avoid garbage.
-         // Or use `--no-color` in git command above.
-         // I'll update git command to `--no-color` in `show_diff` for MVP simplicity.
+         // Parse ANSI codes
+         let text = app.diff_content.into_text().unwrap_or_else(|_| ratatui::text::Text::raw(&app.diff_content));
          
-         let paragraph = Paragraph::new(app.diff_content.clone())
+         let paragraph = Paragraph::new(text)
             .block(Block::default().borders(Borders::ALL).title(" Diff "))
             .scroll((app.diff_scroll, 0));
          f.render_widget(paragraph, area);
