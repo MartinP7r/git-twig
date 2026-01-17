@@ -75,7 +75,7 @@ fn main() -> Result<()> {
         return interactive::run(indent, collapse);
     }
 
-    let result_node = match build_tree_from_git(args.staged_only, args.modified_only) {
+    let result_node = match build_tree_from_git(args.staged_only, args.modified_only, true) {
         Ok(Some(node)) => node,
         Ok(None) => {
             println!("(working directory clean)");
@@ -89,7 +89,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-pub fn build_tree_from_git(staged_only: bool, modified_only: bool) -> Result<Option<node::Node>> {
+pub fn build_tree_from_git(staged_only: bool, modified_only: bool, print_header: bool) -> Result<Option<node::Node>> {
     // Run git status --porcelain -b (to get branch info)
     let status_output = Command::new("git")
         .args(["status", "--porcelain", "-b"])
@@ -115,10 +115,14 @@ pub fn build_tree_from_git(staged_only: bool, modified_only: bool) -> Result<Opt
             // Remove header from lines to be processed by tree parser
             lines.remove(0);
             
-            print_context_header(&header);
+            if print_header {
+                print_context_header(&header);
+            }
             
             if lines.is_empty() {
-                println!("(working directory clean)");
+                if print_header {
+                    println!("(working directory clean)");
+                }
                 return Ok(None);
             }
         }
