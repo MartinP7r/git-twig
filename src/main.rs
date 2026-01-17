@@ -32,6 +32,10 @@ struct Args {
     /// Open all modified files in $EDITOR
     #[arg(short, long)]
     open: bool,
+
+    /// Show only untracked files
+    #[arg(long)]
+    untracked_only: bool,
 }
 
 fn get_git_config(key: &str) -> Option<String> {
@@ -84,7 +88,7 @@ fn main() -> Result<()> {
         return interactive::run(indent, collapse);
     }
 
-    let result_node = match build_tree_from_git(args.staged_only, args.modified_only, !args.open) {
+    let result_node = match build_tree_from_git(args.staged_only, args.modified_only, args.untracked_only, !args.open) {
         Ok(Some(node)) => node,
         Ok(None) => {
             if !args.open {
@@ -126,7 +130,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-pub fn build_tree_from_git(staged_only: bool, modified_only: bool, print_header: bool) -> Result<Option<node::Node>> {
+pub fn build_tree_from_git(staged_only: bool, modified_only: bool, untracked_only: bool, print_header: bool) -> Result<Option<node::Node>> {
     // Run git status --porcelain -b (to get branch info)
     let status_output = Command::new("git")
         .args(["status", "--porcelain", "-b"])
@@ -170,7 +174,7 @@ pub fn build_tree_from_git(staged_only: bool, modified_only: bool, print_header:
     collect_diff_stats(&mut stats, &["diff", "--numstat"])?;
     collect_diff_stats(&mut stats, &["diff", "--cached", "--numstat"])?;
 
-    let result_node = parser::build_tree(lines, &stats, staged_only, modified_only)?;
+    let result_node = parser::build_tree(lines, &stats, staged_only, modified_only, untracked_only)?;
     Ok(Some(result_node))
 }
 
