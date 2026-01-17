@@ -81,9 +81,9 @@ fn main() -> Result<()> {
 }
 
 pub fn build_tree_from_git() -> Result<Option<node::Node>> {
-    // Run git status --porcelain
+    // Run git status --porcelain -b (to get branch info)
     let status_output = Command::new("git")
-        .args(["status", "--porcelain"])
+        .args(["status", "--porcelain", "-b"])
         .output()
         .context("Failed to execute git status")?;
 
@@ -93,10 +93,26 @@ pub fn build_tree_from_git() -> Result<Option<node::Node>> {
     }
 
     let status_stdout = String::from_utf8_lossy(&status_output.stdout);
-    let lines: Vec<String> = status_stdout.lines().map(|s| s.to_string()).collect();
+    let mut lines: Vec<String> = status_stdout.lines().map(|s| s.to_string()).collect();
 
     if lines.is_empty() {
         return Ok(None);
+    }
+
+    // Process header
+    if let Some(first) = lines.first() {
+        if first.starts_with("##") {
+            let header = first.clone();
+            // Remove header from lines to be processed by tree parser
+            lines.remove(0);
+            
+            print_context_header(&header);
+            
+            if lines.is_empty() {
+                println!("(working directory clean)");
+                return Ok(None);
+            }
+        }
     }
 
     // Collect diff stats
@@ -106,6 +122,64 @@ pub fn build_tree_from_git() -> Result<Option<node::Node>> {
 
     let result_node = parser::build_tree(lines, &stats)?;
     Ok(Some(result_node))
+}
+
+fn print_context_header(line: &str) {
+    // Format: ## <local>...<remote> [ahead <N>, behind <M>]
+    // or: ## <local>
+    // or: ## No commits yet on <local>
+    
+    let content = line.trim_start_matches("## ").trim();
+    
+    // Parse
+    // 1. Check for "No commits yet on "
+    if let Some(branch) = content.strip_prefix("No commits yet on ") {
+        println!("On branch {} (No commits yet)", branch);
+        return;
+    }
+    
+    // 2. Split by ... to find remote
+    // "main...origin/main [ahead 1]"
+    let (local_part, rest) = if let Some(idx) = content.find("...") {
+        (&content[..idx], Some(&content[idx+3..]))
+    } else {
+        (content, None)
+    };
+    
+    // 3. Process rest (remote + counts)
+    let (remote, counts) = if let Some(r) = rest {
+         if let Some(bracket_idx) = r.find(" [") {
+             (Some(&r[..bracket_idx]), Some(&r[bracket_idx..]))
+         } else {
+             (Some(r), None)
+         }
+    } else {
+        (None, None)
+    };
+    
+    print!("On branch \x1b[1m{}\x1b[0m", local_part);
+    
+    if let Some(remote_name) = remote {
+        print!(" -> {}", remote_name);
+    }
+    
+    if let Some(counts_str) = counts {
+        // [ahead 1, behind 2] or [ahead 1]
+        let stripped = counts_str.trim_matches(|c| c == '[' || c == ']');
+        let parts: Vec<&str> = stripped.split(", ").collect();
+        
+        for part in parts {
+            if let Some(ahead) = part.strip_prefix("ahead ") {
+                 print!(" \x1b[32m⬆️ {}\x1b[0m", ahead);
+            } else if let Some(behind) = part.strip_prefix("behind ") {
+                 print!(" \x1b[31m⬇️ {}\x1b[0m", behind);
+            } else if part == "gone" {
+                 print!(" \x1b[31m(gone)\x1b[0m");
+            }
+        }
+    }
+    
+    println!(); // Newline
 }
 
 fn collect_diff_stats(
