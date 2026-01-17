@@ -35,14 +35,14 @@ Focus: Making the tool look modern and customizable ("git-twig").
 - [x] **Compact Paths**: Flatten empty directory chains (e.g., `src/main/java...` on one line) to reduce nesting noise.
 - [x] **Vertical Alignment**: Align diff stats separator (`|`) vertically across all rows.
 - [x] **High-Res Diff Bars**: Implement Unicode block element rendering.
-- [x] **Rename Config Keys**: Migrate from `status-tree.*` to `twig.*` (e.g. `twig.collapse`).
 - [x] **Brand Identity**: Design logo and assets.
 
 ## Future Ideas / Backlog
+- [ ] **File Jump**: Jump between files (skipping directories) with `d`/`u`.
+- [ ] **Homebrew Formula**: Publish to Homebrew using `cargo-binstall`.
+- [ ] **Collapsed Folder Lines**: Option to render empty directory chains as a single `/`-separated line (e.g., `📁 src/main/java`) with files listed below.
 - [ ] **Git Worktrees Support**: Visualize multiple worktrees.
 - [ ] **Configurable Themes**: Allow user-defined colors/icons via `git config`.
 - [ ] **Jason/YAML Output**: For machine parsing/integration with other tools.
 - [x] **Split View**: Option to show staged and unstaged files in vertically separate sections (Toggle with `v`).
 - [x] **Fuzzy Search**: Filter file list in interactive mode with `/`.
-- [ ] **File Jump**: Jump between files (skipping directories) with `d`/`u`.
-- [ ] **Homebrew Formula**: Publish to Homebrew using `cargo-binstall`.
