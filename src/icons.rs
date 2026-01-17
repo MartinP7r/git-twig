@@ -1,9 +1,12 @@
 pub fn get_icon(name: &str) -> &'static str {
-    if let Some(ext) = std::path::Path::new(name).extension().and_then(|s| s.to_str()) {
+    if let Some(ext) = std::path::Path::new(name)
+        .extension()
+        .and_then(|s| s.to_str())
+    {
         match ext {
-            "rs" => "🦀", // Rust (or )
+            "rs" => "🦀",    // Rust (or )
             "toml" => "⚙️ ", // Config
-            "md" => "📝", // Markdown (or )
+            "md" => "📝",    // Markdown (or )
             "json" => "IO",
             "yml" | "yaml" => "it",
             "lock" => "🔒",
@@ -19,7 +22,7 @@ pub fn get_icon(name: &str) -> &'static str {
         } else if name == "Makefile" {
             "🛠️ "
         } else {
-             "📄"
+            "📄"
         }
     }
 }

@@ -2,11 +2,11 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::process::Command;
 
+mod icons;
 mod interactive;
 mod node;
 mod parser;
 mod theme;
-mod icons;
 
 use crate::theme::{Theme, ThemeType};
 

@@ -1,7 +1,7 @@
+use crate::icons;
+use crate::theme::Theme;
 use colored::*;
 use std::cmp::Ordering;
-use crate::theme::Theme;
-use crate::icons;
 
 #[derive(Debug, Clone)]
 pub enum NodeType {
@@ -80,7 +80,7 @@ impl Node {
                 } else {
                     theme.icon_file
                 };
-                
+
                 let s_base = format!("{}{}", icon, color_name);
                 let mut s = format!("{} ({})", s_base, status);
 
@@ -167,7 +167,11 @@ impl Node {
             // and the children of "c".
 
             // Prepare the connector
-            let connector = if is_last { theme.tree_end } else { theme.tree_branch };
+            let connector = if is_last {
+                theme.tree_end
+            } else {
+                theme.tree_branch
+            };
             let dashes = theme.tree_dash.to_string().repeat(indent - 2);
 
             // Print current child line
@@ -181,7 +185,11 @@ impl Node {
 
             // Recurse if child is directory (and we have children to show)
             if let Some(recurs_children) = children_to_render {
-                let extension = if is_last { " ".to_string() } else { theme.tree_vertical.to_string() };
+                let extension = if is_last {
+                    " ".to_string()
+                } else {
+                    theme.tree_vertical.to_string()
+                };
                 let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent - 1));
                 self.render_children(recurs_children, indent, collapse, &new_prefix, out, theme);
             }
@@ -265,7 +273,11 @@ impl Node {
             };
 
             // Prepare the connector
-            let connector_symbol = if is_last { theme.tree_end } else { theme.tree_branch };
+            let connector_symbol = if is_last {
+                theme.tree_end
+            } else {
+                theme.tree_branch
+            };
             let dashes = theme.tree_dash.to_string().repeat(indent_size - 2);
             let full_connector = format!("{}{}{} ", prefix, connector_symbol, dashes);
 
@@ -280,9 +292,20 @@ impl Node {
             });
 
             if let Some(recurs_children) = children_to_render {
-                let extension = if is_last { " ".to_string() } else { theme.tree_vertical.to_string() };
+                let extension = if is_last {
+                    " ".to_string()
+                } else {
+                    theme.tree_vertical.to_string()
+                };
                 let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent_size - 1));
-                self.flatten_children(recurs_children, indent_size, collapse, &new_prefix, out, theme);
+                self.flatten_children(
+                    recurs_children,
+                    indent_size,
+                    collapse,
+                    &new_prefix,
+                    out,
+                    theme,
+                );
             }
         }
     }
@@ -290,13 +313,19 @@ impl Node {
     pub fn get_display_name_clean(&self, theme: &Theme) -> String {
         let icon = match &self.node_type {
             NodeType::Directory { .. } => theme.icon_dir,
-            NodeType::File { .. } => if theme.is_nerd { icons::get_icon(&self.name) } else { theme.icon_file },
+            NodeType::File { .. } => {
+                if theme.is_nerd {
+                    icons::get_icon(&self.name)
+                } else {
+                    theme.icon_file
+                }
+            }
         };
 
         match &self.node_type {
             NodeType::Directory { .. } => format!("{}{}", icon, self.name),
             NodeType::File { status, .. } => {
-                format!("{}{}{} ({})", icon, self.name, "", status) 
+                format!("{}{}{} ({})", icon, self.name, "", status)
             }
         }
     }
