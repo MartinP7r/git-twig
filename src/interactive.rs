@@ -95,7 +95,7 @@ impl App {
             FilterMode::Staged => (true, false),
         };
 
-        let tree = build_tree_from_git(staged, modified)?;
+        let tree = build_tree_from_git(staged, modified, false)?;
         if let Some(root) = tree {
             self.nodes = root.flatten(self.indent_size, self.collapse);
             
