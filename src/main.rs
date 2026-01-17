@@ -28,6 +28,10 @@ struct Args {
     /// Show only modified files (hide untracked)
     #[arg(short, long)]
     modified_only: bool,
+
+    /// Open all modified files in $EDITOR
+    #[arg(short, long)]
+    open: bool,
 }
 
 fn get_git_config(key: &str) -> Option<String> {
@@ -67,6 +71,11 @@ fn determine_collapse(arg_collapse: bool) -> bool {
 
 fn main() -> Result<()> {
     let args = Args::parse();
+    
+    if args.interactive && args.open {
+        anyhow::bail!("Cannot use both --interactive and --open");
+    }
+
     let indent = determine_indent(args.indent);
     let collapse = determine_collapse(args.collapse);
 
@@ -75,14 +84,42 @@ fn main() -> Result<()> {
         return interactive::run(indent, collapse);
     }
 
-    let result_node = match build_tree_from_git(args.staged_only, args.modified_only, true) {
+    let result_node = match build_tree_from_git(args.staged_only, args.modified_only, !args.open) {
         Ok(Some(node)) => node,
         Ok(None) => {
-            println!("(working directory clean)");
+            if !args.open {
+               println!("(working directory clean)");
+            }
             return Ok(());
         }
         Err(e) => return Err(e),
     };
+
+    if args.open {
+        let files: Vec<String> = result_node
+            .flatten(indent, collapse)
+            .into_iter()
+            .filter(|node| !node.is_dir)
+            .map(|node| node.full_path)
+            .collect();
+        
+        if files.is_empty() {
+            println!("No modified files to open.");
+            return Ok(());
+        }
+
+        let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+        
+        let status = Command::new(&editor)
+            .args(&files)
+            .status()
+            .with_context(|| format!("Failed to launch editor: {}", editor))?;
+        
+        if !status.success() {
+           anyhow::bail!("Editor exited with error");
+        }
+        return Ok(());
+    }
 
     print!("{}", result_node.render_tree(indent, collapse));
 
