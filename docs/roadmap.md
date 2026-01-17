@@ -42,4 +42,6 @@ Focus: Making the tool look modern and customizable ("git-twig").
 - [ ] **Git Worktrees Support**: Visualize multiple worktrees.
 - [ ] **Configurable Themes**: Allow user-defined colors/icons via `git config`.
 - [ ] **Jason/YAML Output**: For machine parsing/integration with other tools.
-- [ ] **Split View**: Option to show staged and unstaged files in vertically separate sections.
+- [x] **Split View**: Option to show staged and unstaged files in vertically separate sections (Toggle with `v`).
+- [ ] **Fuzzy Search**: Filter file list in interactive mode with `/`.
+- [ ] **File Jump**: Jump between files (skipping directories) with `d`/`u`.
