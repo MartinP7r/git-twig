@@ -262,11 +262,11 @@ mod tests {
     #[test]
     fn test_build_tree_filtering_staged() {
         let lines = vec![
-            "M  staged.txt".to_string(), // M+
+            "M  staged.txt".to_string(),   // M+
             " M unstaged.txt".to_string(), // M
         ];
         let stats = HashMap::new();
-        
+
         // Filter staged only
         let node = build_tree(lines.clone(), &stats, true, false, false).unwrap();
         // Should only contain staged.txt
@@ -276,7 +276,7 @@ mod tests {
         } else {
             panic!("Root should be a directory");
         }
-        
+
         // No filter
         let node = build_tree(lines, &stats, false, false, false).unwrap();
         if let NodeType::Directory { children } = node.node_type {
@@ -293,10 +293,10 @@ mod tests {
             " M modified.txt".to_string(),
         ];
         let stats = HashMap::new();
-        
+
         // Filter modified only (hide untracked)
         let node = build_tree(lines.clone(), &stats, false, true, false).unwrap();
-        
+
         if let NodeType::Directory { children } = node.node_type {
             assert_eq!(children.len(), 1);
             assert!(children.iter().any(|c| c.name == "modified.txt"));
@@ -312,10 +312,10 @@ mod tests {
             " M modified.txt".to_string(),
         ];
         let stats = HashMap::new();
-        
+
         // Filter untracked only
         let node = build_tree(lines.clone(), &stats, false, false, true).unwrap();
-        
+
         if let NodeType::Directory { children } = node.node_type {
             assert_eq!(children.len(), 1);
             assert!(children.iter().any(|c| c.name == "untracked.txt"));
