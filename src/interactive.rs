@@ -118,24 +118,31 @@ impl App {
         let all_tree = build_tree_from_git(false, false, false, false)?;
         if let Some(root) = all_tree {
             let all = root.flatten(self.indent_size, self.collapse, &self.theme);
-            self.unstaged_nodes = all.into_iter().filter(|n| {
-                // Keep if NOT purely staged (which ends with + in our parser)
-                !n.raw_status.ends_with('+')
-            }).collect();
+            self.unstaged_nodes = all
+                .into_iter()
+                .filter(|n| {
+                    // Keep if NOT purely staged (which ends with + in our parser)
+                    !n.raw_status.ends_with('+')
+                })
+                .collect();
         } else {
             self.unstaged_nodes = Vec::new();
         }
 
         // Calculate max width across BOTH lists for consistent alignment
-        let max_staged = self.staged_nodes.iter()
+        let max_staged = self
+            .staged_nodes
+            .iter()
             .map(|n| n.connector.chars().count() + n.name.chars().count())
             .max()
             .unwrap_or(0);
-        let max_unstaged = self.unstaged_nodes.iter()
+        let max_unstaged = self
+            .unstaged_nodes
+            .iter()
             .map(|n| n.connector.chars().count() + n.name.chars().count())
             .max()
             .unwrap_or(0);
-        
+
         self.max_name_width = max_staged.max(max_unstaged);
 
         // Adjust selections
@@ -143,7 +150,11 @@ impl App {
         Self::adjust_selection(&self.staged_nodes, &mut self.staged_state, staged_active);
 
         let unstaged_active = self.focus == Focus::Unstaged;
-        Self::adjust_selection(&self.unstaged_nodes, &mut self.unstaged_state, unstaged_active);
+        Self::adjust_selection(
+            &self.unstaged_nodes,
+            &mut self.unstaged_state,
+            unstaged_active,
+        );
 
         Ok(())
     }
@@ -158,11 +169,11 @@ impl App {
                 }
             }
         } else if !nodes.is_empty() && is_active {
-             // If we just got items and we are active, select 0
-             state.select(Some(0));
+            // If we just got items and we are active, select 0
+            state.select(Some(0));
         } else if !nodes.is_empty() && state.selected().is_none() {
-             // Ensure at least 0 is selected if not empty
-             state.select(Some(0));
+            // Ensure at least 0 is selected if not empty
+            state.select(Some(0));
         } else if nodes.is_empty() {
             state.select(None);
         }
@@ -376,17 +387,35 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         .constraints([
             Constraint::Percentage(50),
             Constraint::Percentage(50),
-            Constraint::Length(3)
+            Constraint::Length(3),
         ])
         .split(f.size());
 
-
     // --- Staged List (Top) ---
-    render_list(f, &app.theme, app.max_name_width, &app.staged_nodes, &mut app.staged_state, chunks[0], " Staged Changes ", Focus::Staged, app.focus);
+    render_list(
+        f,
+        &app.theme,
+        app.max_name_width,
+        &app.staged_nodes,
+        &mut app.staged_state,
+        chunks[0],
+        " Staged Changes ",
+        Focus::Staged,
+        app.focus,
+    );
 
     // --- Unstaged List (Bottom) ---
-    render_list(f, &app.theme, app.max_name_width, &app.unstaged_nodes, &mut app.unstaged_state, chunks[1], " Unstaged Changes ", Focus::Unstaged, app.focus);
-
+    render_list(
+        f,
+        &app.theme,
+        app.max_name_width,
+        &app.unstaged_nodes,
+        &mut app.unstaged_state,
+        chunks[1],
+        " Unstaged Changes ",
+        Focus::Unstaged,
+        app.focus,
+    );
 
     // --- Help ---
     let help_text = vec![
@@ -417,7 +446,6 @@ fn render_list(
     target_focus: Focus,
     current_focus: Focus,
 ) {
-
     let items: Vec<ListItem> = nodes
         .iter()
         .map(|node| {
@@ -494,7 +522,12 @@ fn render_list(
     };
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title(title).border_style(border_style))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(title)
+                .border_style(border_style),
+        )
         .highlight_style(
             Style::default()
                 .bg(Color::Rgb(50, 50, 50))
@@ -503,7 +536,6 @@ fn render_list(
         .highlight_symbol(">> ");
 
     f.render_stateful_widget(list, area, state);
-
 
     // Tests removed as FilterMode is deleted
 }
