@@ -687,6 +687,40 @@ fn render_list(
         .highlight_symbol(">> ");
 
     f.render_stateful_widget(list, area, state);
+}
 
-    // Tests removed as FilterMode is deleted
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_filter_mode_transitions() {
+        let mode = FilterMode::All;
+        assert_eq!(mode.as_str(), "All");
+
+        let mode = mode.next();
+        assert_eq!(mode, FilterMode::Modified);
+        assert_eq!(mode.as_str(), "Modified");
+
+        let mode = mode.next();
+        assert_eq!(mode, FilterMode::Staged);
+        assert_eq!(mode.as_str(), "Staged");
+
+        let mode = mode.next();
+        assert_eq!(mode, FilterMode::All);
+    }
+
+    #[test]
+    fn test_app_layout_transitions() {
+        let layout = AppLayout::Unified;
+        assert_eq!(layout.next(), AppLayout::Split);
+        assert_eq!(layout.next().next(), AppLayout::Unified);
+    }
+
+    #[test]
+    fn test_focus_transitions() {
+        let focus = Focus::Staged;
+        assert_eq!(focus.next(), Focus::Unstaged);
+        assert_eq!(focus.next().next(), Focus::Staged);
+    }
 }
