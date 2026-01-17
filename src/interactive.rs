@@ -117,6 +117,8 @@ struct App {
     layout: AppLayout,
     filter_mode: FilterMode,
     focus: Focus,
+    search_query: String,
+    is_typing_search: bool,
     view_mode: ViewMode,
     diff_content: String,
     diff_scroll: u16,
@@ -138,6 +140,8 @@ impl App {
             layout: AppLayout::Unified, // Default to Unified
             filter_mode: FilterMode::All,
             focus: Focus::Unstaged,
+            search_query: String::new(),
+            is_typing_search: false,
             view_mode: ViewMode::Tree,
             diff_content: String::new(),
             diff_scroll: 0,
@@ -146,6 +150,18 @@ impl App {
         };
         app.refresh()?;
         Ok(app)
+    }
+
+    fn filter_nodes<'a>(nodes: &'a [FlatNode], query: &str) -> Vec<&'a FlatNode> {
+        if query.is_empty() {
+            nodes.iter().collect()
+        } else {
+            let q = query.to_lowercase();
+            nodes
+                .iter()
+                .filter(|n| n.name.to_lowercase().contains(&q) || n.full_path.to_lowercase().contains(&q))
+                .collect()
+        }
     }
 
     fn refresh(&mut self) -> Result<()> {
@@ -261,8 +277,15 @@ impl App {
         }
     }
 
-    fn toggle_focus(&mut self) {
+    fn toggle_focus(&mut self) -> Result<()> {
         self.focus = self.focus.next();
+        Ok(()) // Changed to return Result to match traits if needed, otherwise just remove Result
+    }
+
+    fn reset_selection(&mut self) {
+        self.staged_state.select(Some(0));
+        self.unstaged_state.select(Some(0));
+        self.unified_state.select(Some(0));
     }
 
     fn show_diff(&mut self) -> Result<()> {
@@ -274,8 +297,10 @@ impl App {
             },
         };
 
+        let filtered = Self::filter_nodes(nodes, &self.search_query);
+
         if let Some(i) = state.selected() {
-            if let Some(node) = nodes.get(i) {
+            if let Some(node) = filtered.get(i) {
                 if node.is_dir {
                     return Ok(());
                 }
@@ -350,12 +375,14 @@ impl App {
             },
         };
 
-        if nodes.is_empty() {
+        let filtered = Self::filter_nodes(nodes, &self.search_query);
+
+        if filtered.is_empty() {
             return;
         }
         let i = match state.selected() {
             Some(i) => {
-                if i >= nodes.len() - 1 {
+                if i >= filtered.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -375,13 +402,15 @@ impl App {
             },
         };
 
-        if nodes.is_empty() {
+        let filtered = Self::filter_nodes(nodes, &self.search_query);
+
+        if filtered.is_empty() {
             return;
         }
         let i = match state.selected() {
             Some(i) => {
                 if i == 0 {
-                    nodes.len() - 1
+                    filtered.len() - 1
                 } else {
                     i - 1
                 }
@@ -400,8 +429,10 @@ impl App {
             },
         };
 
+        let filtered = Self::filter_nodes(nodes, &self.search_query);
+
         if let Some(i) = state.selected() {
-            if let Some(node) = nodes.get(i) {
+            if let Some(node) = filtered.get(i) {
                 if node.raw_status.contains('+') {
                     // Unstage
                     let status = Command::new("git")
@@ -431,38 +462,67 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
 
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                match app.view_mode {
-                    ViewMode::Tree => match key.code {
-                        KeyCode::Char('q') => return Ok(()),
-                        KeyCode::Char('j') | KeyCode::Down => app.next(),
-                        KeyCode::Char('k') | KeyCode::Up => app.previous(),
-                        KeyCode::Char('s') | KeyCode::Char(' ') => {
-                            let _ = app.toggle_stage();
+                if app.is_typing_search {
+                    match key.code {
+                        KeyCode::Char(c) => {
+                            app.search_query.push(c);
+                            app.reset_selection();
                         }
-                        KeyCode::Char('f') => {
-                            if app.layout == AppLayout::Unified {
-                                let _ = app.toggle_filter();
-                            }
+                        KeyCode::Backspace => {
+                            app.search_query.pop();
+                            app.reset_selection();
                         }
-                        KeyCode::Char('v') => {
-                            let _ = app.toggle_layout();
-                        }
-                        KeyCode::Tab => {
-                            if app.layout == AppLayout::Split {
-                                app.toggle_focus();
-                            }
+                        KeyCode::Esc => {
+                            app.is_typing_search = false;
+                            app.search_query.clear();
+                            app.reset_selection();
                         }
                         KeyCode::Enter => {
-                            let _ = app.show_diff();
+                            app.is_typing_search = false;
                         }
                         _ => {}
-                    },
-                    ViewMode::Diff => match key.code {
-                        KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter => app.close_diff(),
-                        KeyCode::Char('j') | KeyCode::Down => app.scroll_diff(1),
-                        KeyCode::Char('k') | KeyCode::Up => app.scroll_diff(-1),
-                        _ => {}
-                    },
+                    }
+                } else {
+                    match app.view_mode {
+                        ViewMode::Tree => match key.code {
+                            KeyCode::Char('q') => return Ok(()),
+                            KeyCode::Char('/') => {
+                                app.is_typing_search = true;
+                            }
+                            KeyCode::Char('j') | KeyCode::Down => app.next(),
+                            KeyCode::Char('k') | KeyCode::Up => app.previous(),
+                            KeyCode::Char('s') | KeyCode::Char(' ') => {
+                                let _ = app.toggle_stage();
+                            }
+                            KeyCode::Char('f') => {
+                                if app.layout == AppLayout::Unified {
+                                    let _ = app.toggle_filter();
+                                }
+                            }
+                            KeyCode::Char('v') => {
+                                let _ = app.toggle_layout();
+                            }
+                            KeyCode::Tab => {
+                                if app.layout == AppLayout::Split {
+                                    app.toggle_focus();
+                                }
+                            }
+                            KeyCode::Enter => {
+                                let _ = app.show_diff();
+                            }
+                            KeyCode::Esc => {
+                                app.search_query.clear();
+                                app.reset_selection();
+                            }
+                            _ => {}
+                        },
+                        ViewMode::Diff => match key.code {
+                            KeyCode::Char('q') | KeyCode::Esc | KeyCode::Enter => app.close_diff(),
+                            KeyCode::Char('j') | KeyCode::Down => app.scroll_diff(1),
+                            KeyCode::Char('k') | KeyCode::Up => app.scroll_diff(-1),
+                            _ => {}
+                        },
+                    }
                 }
             }
         }
@@ -493,40 +553,22 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                 .constraints([Constraint::Min(0), Constraint::Length(3)])
                 .split(f.size());
 
-            let title = format!(
-                " git-twig interactive | Filter: {} ",
-                app.filter_mode.as_str()
-            );
+            let title = format!(" git-twig interactive | Filter: {} ", app.filter_mode.as_str());
+            let filtered = App::filter_nodes(&app.unified_nodes, &app.search_query);
+            
             render_list(
                 f,
                 &app.theme,
                 app.max_name_width,
-                &app.unified_nodes,
+                &filtered,
                 &mut app.unified_state,
                 chunks[0],
                 &title,
-                Focus::Unstaged, // Focus not really used here, pass dummy
-                Focus::Unstaged, // Match dummy
+                Focus::Unstaged,
+                Focus::Unstaged,
             );
 
-            // Help for Unified
-            let help_text = vec![
-                ratatui::text::Span::raw(" [j/k]"),
-                ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
-                ratatui::text::Span::raw("  [Space]"),
-                ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
-                ratatui::text::Span::raw("  [f]"),
-                ratatui::text::Span::styled(" Filter", Style::default().fg(Color::Yellow)),
-                ratatui::text::Span::raw("  [v]"),
-                ratatui::text::Span::styled(" View", Style::default().fg(Color::Green)),
-                ratatui::text::Span::raw("  [Enter]"),
-                ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
-                ratatui::text::Span::raw("  [q]"),
-                ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
-            ];
-            let help = Paragraph::new(Line::from(help_text))
-                .block(Block::default().borders(Borders::ALL).title(" Help "));
-            f.render_widget(help, chunks[1]);
+            render_bottom_bar(f, app, chunks[1]);
         }
         AppLayout::Split => {
             let chunks = Layout::default()
@@ -539,11 +581,12 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                 .split(f.size());
 
             // --- Staged List (Top) ---
+            let filtered_staged = App::filter_nodes(&app.staged_nodes, &app.search_query);
             render_list(
                 f,
                 &app.theme,
                 app.max_name_width,
-                &app.staged_nodes,
+                &filtered_staged,
                 &mut app.staged_state,
                 chunks[0],
                 " Staged Changes ",
@@ -552,11 +595,12 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
             );
 
             // --- Unstaged List (Bottom) ---
+            let filtered_unstaged = App::filter_nodes(&app.unstaged_nodes, &app.search_query);
             render_list(
                 f,
                 &app.theme,
                 app.max_name_width,
-                &app.unstaged_nodes,
+                &filtered_unstaged,
                 &mut app.unstaged_state,
                 chunks[1],
                 " Unstaged Changes ",
@@ -564,8 +608,40 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                 app.focus,
             );
 
-            // --- Help for Split ---
-            let help_text = vec![
+            render_bottom_bar(f, app, chunks[2]);
+        }
+    }
+}
+
+fn render_bottom_bar(f: &mut ratatui::Frame, app: &App, area: ratatui::layout::Rect) {
+    if app.is_typing_search || !app.search_query.is_empty() {
+        let prefix = if app.is_typing_search { "/" } else { "Search: " };
+        let text = format!("{}{}", prefix, app.search_query);
+        let p = Paragraph::new(text)
+            .style(Style::default().fg(Color::Yellow))
+            .block(Block::default().borders(Borders::ALL).title(" Search "));
+        f.render_widget(p, area);
+    } else {
+        // --- Help ---
+        let help_text = if app.layout == AppLayout::Unified {
+            vec![
+                ratatui::text::Span::raw(" [j/k]"),
+                ratatui::text::Span::styled(" Nav", Style::default().fg(Color::Gray)),
+                ratatui::text::Span::raw("  [Space]"),
+                ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
+                ratatui::text::Span::raw("  [f]"),
+                ratatui::text::Span::styled(" Filter", Style::default().fg(Color::Yellow)),
+                ratatui::text::Span::raw("  [v]"),
+                ratatui::text::Span::styled(" View", Style::default().fg(Color::Green)),
+                ratatui::text::Span::raw("  [/]"),
+                ratatui::text::Span::styled(" Search", Style::default().fg(Color::Cyan)),
+                ratatui::text::Span::raw("  [Enter]"),
+                ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
+                ratatui::text::Span::raw("  [q]"),
+                ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
+            ]
+        } else {
+            vec![
                 ratatui::text::Span::raw(" [Tab]"),
                 ratatui::text::Span::styled(" Switch Pane", Style::default().fg(Color::Yellow)),
                 ratatui::text::Span::raw("  [j/k]"),
@@ -574,15 +650,17 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
                 ratatui::text::Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
                 ratatui::text::Span::raw("  [v]"),
                 ratatui::text::Span::styled(" View", Style::default().fg(Color::Green)),
+                ratatui::text::Span::raw("  [/]"),
+                ratatui::text::Span::styled(" Search", Style::default().fg(Color::Cyan)),
                 ratatui::text::Span::raw("  [Enter]"),
                 ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
                 ratatui::text::Span::raw("  [q]"),
                 ratatui::text::Span::styled(" Quit", Style::default().fg(Color::Gray)),
-            ];
-            let help = Paragraph::new(Line::from(help_text))
-                .block(Block::default().borders(Borders::ALL).title(" Help "));
-            f.render_widget(help, chunks[2]);
-        }
+            ]
+        };
+        let help = Paragraph::new(Line::from(help_text))
+            .block(Block::default().borders(Borders::ALL).title(" Help "));
+        f.render_widget(help, area);
     }
 }
 
@@ -590,7 +668,7 @@ fn render_list(
     f: &mut ratatui::Frame,
     theme: &Theme,
     max_name_width: usize,
-    nodes: &[FlatNode],
+    nodes: &[&FlatNode],
     state: &mut ListState,
     area: ratatui::layout::Rect,
     title: &str,
@@ -722,5 +800,43 @@ mod tests {
         let focus = Focus::Staged;
         assert_eq!(focus.next(), Focus::Unstaged);
         assert_eq!(focus.next().next(), Focus::Staged);
+    }
+
+    #[test]
+    fn test_filter_nodes() {
+        let nodes = vec![
+            FlatNode {
+                name: "foo.rs".into(),
+                name_colored: "foo.rs".into(),
+                full_path: "src/foo.rs".into(),
+                indent: 0,
+                is_dir: false,
+                status: ' ',
+                raw_status: "??".into(),
+                connector: "".into(),
+                stats: None,
+            },
+            FlatNode {
+                name: "bar.rs".into(),
+                name_colored: "bar.rs".into(),
+                full_path: "src/bar.rs".into(),
+                indent: 0,
+                is_dir: false,
+                status: ' ',
+                raw_status: "??".into(),
+                connector: "".into(),
+                stats: None,
+            },
+        ];
+
+        let filtered = App::filter_nodes(&nodes, "foo");
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].name, "foo.rs");
+
+        let filtered_all = App::filter_nodes(&nodes, "");
+        assert_eq!(filtered_all.len(), 2);
+        
+        let filtered_none = App::filter_nodes(&nodes, "baz");
+        assert_eq!(filtered_none.len(), 0);
     }
 }
