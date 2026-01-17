@@ -89,15 +89,14 @@ impl Node {
         }
     }
 
-
-
     pub fn render_tree(&self, indent: usize, collapse: bool, theme: &Theme) -> String {
         let flattened = self.flatten(indent, collapse, theme);
-        
+
         // Calculate max width for alignment
         // We consider the length of "connector + name"
         // We assume name.chars().count() is visual width (which is true for ascii/clean unicode without color)
-        let max_width = flattened.iter()
+        let max_width = flattened
+            .iter()
             .map(|n| n.connector.chars().count() + n.name.chars().count())
             .max()
             .unwrap_or(0);
@@ -140,10 +139,7 @@ impl Node {
 
             out.push_str(&format!(
                 "{}{}{}{}\n",
-                node.connector,
-                node.name_colored,
-                padding,
-                stats_bar
+                node.connector, node.name_colored, padding, stats_bar
             ));
         }
         out
