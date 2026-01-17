@@ -85,6 +85,7 @@ struct App {
     diff_content: String,
     diff_scroll: u16,
     theme: Theme,
+    max_name_width: usize,
 }
 
 impl App {
@@ -99,6 +100,7 @@ impl App {
             diff_content: String::new(),
             diff_scroll: 0,
             theme,
+            max_name_width: 0,
         };
         app.refresh()?;
         Ok(app)
@@ -114,6 +116,13 @@ impl App {
         let tree = build_tree_from_git(staged, modified, false, false)?;
         if let Some(root) = tree {
             self.nodes = root.flatten(self.indent_size, self.collapse, &self.theme);
+
+            self.max_name_width = self
+                .nodes
+                .iter()
+                .map(|n| n.connector.chars().count() + n.name.chars().count())
+                .max()
+                .unwrap_or(0);
 
             // Adjust selection if out of bounds
             if let Some(selected) = self.state.selected() {
@@ -328,6 +337,9 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
         .constraints([Constraint::Min(0), Constraint::Length(3)])
         .split(f.size());
 
+    let theme = &app.theme;
+    let max_name_width = app.max_name_width;
+
     let items: Vec<ListItem> = app
         .nodes
         .iter()
@@ -350,12 +362,50 @@ fn ui(f: &mut ratatui::Frame, app: &mut App) {
             };
             let name = ratatui::text::Span::styled(&node.name, name_style);
 
-            let line = Line::from(vec![
+            // Stats bar logic
+            let width = node.connector.chars().count() + node.name.chars().count();
+            let padding_len = if max_name_width > width {
+                max_name_width - width
+            } else {
+                0
+            };
+            let padding = " ".repeat(padding_len);
+
+            let mut spans = vec![
                 status_indicator,
                 ratatui::text::Span::raw(" "),
                 connector,
                 name,
-            ]);
+            ];
+
+            if let Some((added, deleted)) = node.stats {
+                let total = added + deleted;
+                if total > 0 {
+                    spans.push(ratatui::text::Span::raw(format!("{}{}", padding, " | ")));
+                    spans.push(ratatui::text::Span::raw(format!("{} ", total)));
+
+                    let max_bar_width = 10;
+                    let (plus_chars, minus_chars) = if total <= max_bar_width {
+                        (added, deleted)
+                    } else {
+                        let ratio = added as f64 / total as f64;
+                        let p = (ratio * max_bar_width as f64).round() as usize;
+                        let m = max_bar_width - p;
+                        (p, m)
+                    };
+
+                    spans.push(ratatui::text::Span::styled(
+                        theme.diff_bar_plus.to_string().repeat(plus_chars),
+                        Style::default().fg(Color::Green),
+                    ));
+                    spans.push(ratatui::text::Span::styled(
+                        theme.diff_bar_minus.to_string().repeat(minus_chars),
+                        Style::default().fg(Color::Red),
+                    ));
+                }
+            }
+
+            let line = Line::from(spans);
             ListItem::new(line)
         })
         .collect();
