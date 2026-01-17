@@ -305,8 +305,69 @@ impl Node {
     pub fn get_raw_status(&self) -> String {
         match &self.node_type {
             NodeType::File { status, .. } => status.clone(),
-            NodeType::Directory { .. } => String::new(),
+            NodeType::Directory { children } => {
+               if children.is_empty() {
+                   return String::new();
+               }
+
+               let mut all_staged = true;
+               for child in children {
+                   let s = child.get_raw_status();
+                   // If any child is NOT staged (doesn't contain '+'), 
+                   // then the directory is not fully staged.
+                   if !s.contains('+') {
+                       all_staged = false;
+                       break;
+                   }
+               }
+
+               if all_staged {
+                   "M+".to_string()
+               } else {
+                   "M".to_string()
+               }
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_node_directory_status() {
+        // Case 1: All children staged
+        let child1 = Node::new_file("a".to_string(), "a".to_string(), "M+".to_string(), None);
+        let child2 = Node::new_file("b".to_string(), "b".to_string(), "A+".to_string(), None);
+        let dir_staged = Node::new_dir("dir".to_string(), "dir".to_string(), vec![child1, child2]);
+        assert_eq!(dir_staged.get_raw_status(), "M+");
+
+        // Case 2: Mixed (one staged, one unstaged)
+        let child3 = Node::new_file("c".to_string(), "c".to_string(), "M+".to_string(), None);
+        let child4 = Node::new_file("d".to_string(), "d".to_string(), "M".to_string(), None); // Unstaged
+        let dir_mixed = Node::new_dir("dir_mixed".to_string(), "dir_mixed".to_string(), vec![child3, child4]);
+        assert_eq!(dir_mixed.get_raw_status(), "M");
+
+        // Case 3: All unstaged
+        let child5 = Node::new_file("e".to_string(), "e".to_string(), "??".to_string(), None);
+        let dir_unstaged = Node::new_dir("dir_unstaged".to_string(), "dir_unstaged".to_string(), vec![child5]);
+        assert_eq!(dir_unstaged.get_raw_status(), "M");
+        
+        // Case 4: Recursive
+        let nested_dir = Node::new_dir("nested".to_string(), "nested".to_string(), vec![
+             Node::new_file("f".to_string(), "f".to_string(), "M".to_string(), None)
+        ]);
+        let parent_dir = Node::new_dir("parent".to_string(), "parent".to_string(), vec![nested_dir]);
+        // nested child is M (unstaged), so nested is M. Parent sees M (no +), so parent is M.
+        assert_eq!(parent_dir.get_raw_status(), "M");
+        
+        let nested_dir_staged = Node::new_dir("nested_s".to_string(), "nested_s".to_string(), vec![
+             Node::new_file("g".to_string(), "g".to_string(), "M+".to_string(), None)
+        ]);
+        let parent_dir_staged = Node::new_dir("parent_s".to_string(), "parent_s".to_string(), vec![nested_dir_staged]);
+        // nested child is M+ (staged), so nested is M+. Parent sees M+ (has +), so parent is M+.
+        assert_eq!(parent_dir_staged.get_raw_status(), "M+");
     }
 }
 
