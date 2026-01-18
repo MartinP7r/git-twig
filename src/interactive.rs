@@ -21,7 +21,7 @@ use ratatui::{
 
 use crate::build_tree_from_git;
 use crate::node::FlatNode;
-use crate::theme::Theme;
+use crate::theme::{Theme, ThemeType};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum FilterMode {
@@ -123,6 +123,7 @@ struct App {
     diff_content: String,
     diff_scroll: u16,
     theme: Theme,
+    theme_type: ThemeType,
     max_name_width: usize,
 }
 
@@ -145,7 +146,8 @@ impl App {
             view_mode: ViewMode::Tree,
             diff_content: String::new(),
             diff_scroll: 0,
-            theme,
+            theme: theme.clone(),
+            theme_type: ThemeType::Unicode, // Default, will be properly set by caller
             max_name_width: 0,
         };
         app.refresh()?;
@@ -256,6 +258,12 @@ impl App {
 
     fn toggle_layout(&mut self) -> Result<()> {
         self.layout = self.layout.next();
+        self.refresh()
+    }
+
+    fn toggle_theme(&mut self) -> Result<()> {
+        self.theme_type = self.theme_type.next();
+        self.theme = Theme::new(self.theme_type);
         self.refresh()
     }
 
@@ -504,6 +512,9 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                             KeyCode::Char('v') => {
                                 let _ = app.toggle_layout();
                             }
+                            KeyCode::Char('t') => {
+                                let _ = app.toggle_theme();
+                            }
                             KeyCode::Tab => {
                                 if app.layout == AppLayout::Split {
                                     let _ = app.toggle_focus();
@@ -644,6 +655,8 @@ fn render_bottom_bar(f: &mut ratatui::Frame, app: &App, area: ratatui::layout::R
                 ratatui::text::Span::styled(" View", Style::default().fg(Color::Green)),
                 ratatui::text::Span::raw("  [/]"),
                 ratatui::text::Span::styled(" Search", Style::default().fg(Color::Cyan)),
+                ratatui::text::Span::raw("  [t]"),
+                ratatui::text::Span::styled(" Theme", Style::default().fg(Color::LightMagenta)),
                 ratatui::text::Span::raw("  [Enter]"),
                 ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
                 ratatui::text::Span::raw("  [q]"),
@@ -661,6 +674,8 @@ fn render_bottom_bar(f: &mut ratatui::Frame, app: &App, area: ratatui::layout::R
                 ratatui::text::Span::styled(" View", Style::default().fg(Color::Green)),
                 ratatui::text::Span::raw("  [/]"),
                 ratatui::text::Span::styled(" Search", Style::default().fg(Color::Cyan)),
+                ratatui::text::Span::raw("  [t]"),
+                ratatui::text::Span::styled(" Theme", Style::default().fg(Color::LightMagenta)),
                 ratatui::text::Span::raw("  [Enter]"),
                 ratatui::text::Span::styled(" Diff", Style::default().fg(Color::Blue)),
                 ratatui::text::Span::raw("  [q]"),

@@ -39,7 +39,7 @@ Focus: Making the tool look modern and customizable ("git-twig").
 
 ## Future Ideas / Backlog
 - [ ] **File Jump**: Jump between files (skipping directories) with `d`/`u`.
-- [ ] **Theme Toggle**: Cycle through themes with `t` in interactive mode.
+- [x] **Theme Toggle**: Cycle through themes with `t` in interactive mode.
 - [ ] **Homebrew Formula**: Publish to Homebrew using `cargo-binstall`.
 - [ ] **Collapsed Folder Lines**: Option to render empty directory chains as a single `/`-separated line (e.g., `📁 src/main/java`) with files listed below.
 - [ ] **Git Worktrees Support**: Visualize multiple worktrees.

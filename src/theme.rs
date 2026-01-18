@@ -1,11 +1,21 @@
 use clap::ValueEnum;
 
-#[derive(Debug, Clone, Copy, ValueEnum, Default)]
+#[derive(Debug, Clone, Copy, ValueEnum, Default, PartialEq)]
 pub enum ThemeType {
     #[default]
     Ascii,
     Unicode,
     Nerd,
+}
+
+impl ThemeType {
+    pub fn next(&self) -> Self {
+        match self {
+            ThemeType::Ascii => ThemeType::Unicode,
+            ThemeType::Unicode => ThemeType::Nerd,
+            ThemeType::Nerd => ThemeType::Ascii,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
