@@ -95,7 +95,7 @@ fn determine_theme(arg_theme: Option<ThemeType>) -> Theme {
         }
     }
     // Default
-    Theme::ascii()
+    Theme::unicode()
 }
 
 fn main() -> Result<()> {
