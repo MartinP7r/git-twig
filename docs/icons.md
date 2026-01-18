@@ -1,64 +1,64 @@
 # Icons Reference
 
-This documents the icons/ligatures used in `--theme nerd` mode.
+This documents the icons/ligatures used in `--theme nerd` mode.  
+**Requires a [Nerd Font](https://www.nerdfonts.com/) to render correctly.**
 
 ## File Extensions
 
-| Extension | Icon | Name |
-|-----------|------|------|
-| `.rs` | 🦀 | Rust |
-| `.toml` | ⚙️ | Config |
-| `.md` | 📝 | Markdown |
-| `.json` | IO | JSON |
-| `.yml` / `.yaml` | it | YAML |
-| `.lock` | 🔒 | Lock File |
-| `.sh` | 🐚 | Shell Script |
-| `.png` / `.jpg` / `.jpeg` / `.gif` / `.svg` | 🖼️ | Image |
-| `.gitignore` | 🙈 | Git Ignore |
-| `.py` | 🐍 | Python |
-| `.js` | JS | JavaScript |
-| `.ts` | TS | TypeScript |
-| `.go` | Go | Go |
-| `.rb` | 💎 | Ruby |
-| `.java` | ☕ | Java |
-| `.c` / `.h` | C | C |
-| `.cpp` / `.hpp` | C++ | C++ |
-| `.swift` | 🐦 | Swift |
-| `.kt` | K | Kotlin |
-| `.css` | 🎨 | CSS |
-| `.html` | 🌐 | HTML |
-| `.sql` | 🗃️ | SQL |
-| `.dockerfile` / `Dockerfile` | 🐳 | Docker |
-| `.env` | 🔐 | Environment |
-| *(default)* | 📄 | Generic File |
+| Extension | Icon | Nerd Font Name |
+|-----------|:----:|----------------|
+| `.rs` |  | nf-dev-rust |
+| `.toml` |  | nf-seti-config |
+| `.md` |  | nf-dev-markdown |
+| `.json` |  | nf-seti-json |
+| `.yml` / `.yaml` |  | nf-seti-yaml |
+| `.lock` |  | nf-fa-lock |
+| `.sh` / `.bash` |  | nf-dev-terminal |
+| `.py` |  | nf-dev-python |
+| `.js` |  | nf-dev-javascript |
+| `.ts` |  | nf-seti-typescript |
+| `.go` |  | nf-dev-go |
+| `.rb` |  | nf-dev-ruby |
+| `.java` |  | nf-dev-java |
+| `.c` / `.h` |  | nf-custom-c |
+| `.cpp` / `.hpp` |  | nf-custom-cpp |
+| `.swift` |  | nf-dev-swift |
+| `.kt` |  | nf-seti-kotlin |
+| `.css` |  | nf-dev-css3 |
+| `.html` |  | nf-dev-html5 |
+| `.sql` |  | nf-dev-database |
+| `.png` / `.jpg` / `.svg` |  | nf-fa-image |
+| `.gitignore` |  | nf-dev-git |
+| *(default)* |  | nf-fa-file |
 
 ## Special Files
 
-| Filename | Icon | Name |
-|----------|------|------|
-| `LICENSE` | ⚖️ | License |
-| `Makefile` | 🛠️ | Makefile |
-| `README.md` | 📖 | Readme |
-| `Cargo.toml` | 📦 | Cargo Manifest |
-| `package.json` | 📦 | NPM Package |
-| `.gitignore` | 🙈 | Git Ignore |
+| Filename | Icon | Nerd Font Name |
+|----------|:----:|----------------|
+| `LICENSE` |  | nf-oct-law |
+| `Makefile` |  | nf-seti-makefile |
+| `Dockerfile` |  | nf-dev-docker |
+| `Cargo.toml` |  | nf-dev-rust |
+| `package.json` |  | nf-dev-npm |
+| `.env` |  | nf-fa-key |
 
 ## Directories
 
-| Folder Name | Icon | Purpose |
-|-------------|------|---------|
-| `src` | 📁 | Source Code |
-| `tests` | 🧪 | Test Files |
-| `build` / `dist` / `target` | 📦 | Build Output |
-| `docs` | 📚 | Documentation |
-| `config` / `.config` | ⚙️ | Configuration |
-| `scripts` | 📜 | Scripts |
-| `assets` / `images` | 🖼️ | Media Assets |
-| `.git` | 🔀 | Git Metadata |
-| `node_modules` / `vendor` | 📁 | Dependencies |
-| `.github` | 🐙 | GitHub Config |
-| `.vscode` | 💻 | VSCode Settings |
+| Folder Name | Icon | Nerd Font Name |
+|-------------|:----:|----------------|
+| *(default)* |  | nf-fa-folder |
+| `src` |  | nf-fa-code |
+| `tests` / `test` |  | nf-md-flask |
+| `build` / `dist` / `target` |  | nf-fa-cube |
+| `docs` |  | nf-fa-book |
+| `config` |  | nf-fa-cog |
+| `scripts` |  | nf-fa-terminal |
+| `assets` / `images` |  | nf-fa-image |
+| `.git` |  | nf-dev-git |
+| `.github` |  | nf-dev-github |
+| `.vscode` |  | nf-dev-visualstudio |
+| `node_modules` / `vendor` |  | nf-fa-archive |
 
 ---
 
-> **Note**: Icons may render differently depending on your terminal's font support. Best results with a Nerd Font.
+> **Note**: If icons appear as boxes or question marks, install a [Nerd Font](https://www.nerdfonts.com/).
