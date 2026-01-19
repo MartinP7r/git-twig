@@ -29,6 +29,7 @@ pub struct Theme {
     pub diff_bar_plus: char,
     pub diff_bar_minus: char,
     pub is_nerd: bool,
+    pub simple_icons: bool,
 }
 
 impl Theme {
@@ -38,6 +39,11 @@ impl Theme {
             ThemeType::Unicode => Self::unicode(),
             ThemeType::Nerd => Self::nerd(),
         }
+    }
+
+    pub fn with_simple_icons(mut self, simple: bool) -> Self {
+        self.simple_icons = simple;
+        self
     }
 
     pub fn ascii() -> Self {
@@ -51,6 +57,7 @@ impl Theme {
             diff_bar_plus: '+',
             diff_bar_minus: '-',
             is_nerd: false,
+            simple_icons: false,
         }
     }
 
@@ -65,6 +72,7 @@ impl Theme {
             diff_bar_plus: '◼',
             diff_bar_minus: '◼',
             is_nerd: false,
+            simple_icons: false,
         }
     }
 
@@ -79,6 +87,7 @@ impl Theme {
             diff_bar_plus: '◼',
             diff_bar_minus: '◼',
             is_nerd: true,
+            simple_icons: false,
         }
     }
 }

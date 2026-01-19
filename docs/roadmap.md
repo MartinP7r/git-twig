@@ -38,9 +38,14 @@ Focus: Making the tool look modern and customizable ("git-twig").
 - [x] **Brand Identity**: Design logo and assets.
 
 ## Future Ideas / Backlog
-- [ ] **File Jump**: Jump between files (skipping directories) with `d`/`u`.
+- [x] **File Jump**: Jump between files (skipping directories) with `d`/`u`.
+- [x] **Tree Folding**: Expand (`l`) and collapse (`h`) directories in interactive mode.
 - [x] **Theme Toggle**: Cycle through themes with `t` in interactive mode.
 - [ ] **Homebrew Formula**: Publish to Homebrew using `cargo-binstall`.
+- [x] **Analyze and improve current architecture**: Refactor core components for better maintainability and performance.
+- [x] **Analyze the code base for performance improvements**: Identify and resolve bottlenecks in tree building and TUI rendering.
+- [ ] **GitHub Pages**: Create a beautiful landing page on GitHub Pages.
+- [ ] **Deep Example Structure**: Expand `sample-git/docs` with multi-level sub-directories (3-4 levels) containing a mix of `.md`, `.php`, `.py`, `.rs`, `.xml`, `.json`, `.go`, `.swift`, `.js`, and `.rb` files to better test/demo icon mapping and tree depth.
 - [ ] **Collapsed Folder Lines**: Option to render empty directory chains as a single `/`-separated line (e.g., `📁 src/main/java`) with files listed below.
 - [ ] **Git Worktrees Support**: Visualize multiple worktrees.
 - [ ] **Configurable Themes**: Allow user-defined colors/icons via `git config`.

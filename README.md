@@ -13,8 +13,6 @@ Run `git twig` (or `git tree`) to list all files:
 
 It includes a visual diff bar (e.g., `++++----`) to show the scale of changes.
 
-![Example Output](https://github.com/user-attachments/assets/f1f15556-bf95-4fe8-8231-a8858e80f20e)
-
 ## Installation
 
 ### From Source (Rust)
@@ -53,9 +51,11 @@ git config --global twig.indent 2
 git config --global twig.collapse true
 ```
 
-*Note: Legacy `status-tree.*` keys are supported but deprecated.*
-
-## Development
+**Theme** (Default: unicode)
+```bash
+# Options: ascii, unicode, nerd
+git config --global twig.theme nerd
+```
 
 1. **Build**: `cargo build`
 2. **Run**: `cargo run`

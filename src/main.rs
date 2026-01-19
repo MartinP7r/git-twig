@@ -2,11 +2,12 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::process::Command;
 
+mod git;
 mod icons;
-mod interactive;
 mod node;
 mod parser;
 mod theme;
+mod tui;
 
 use crate::theme::{Theme, ThemeType};
 
@@ -44,29 +45,15 @@ struct Args {
     /// Visual theme (ascii, unicode, nerd)
     #[arg(long, value_enum)]
     theme: Option<ThemeType>,
-}
 
-fn get_git_config(key: &str) -> Option<String> {
-    let output = Command::new("git")
-        .args(["config", "--global", key])
-        .output()
-        .ok()?;
-
-    if output.status.success() {
-        let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if s.is_empty() {
-            None
-        } else {
-            Some(s)
-        }
-    } else {
-        None
-    }
+    /// Use simple icons (generic folder/file) instead of rich Nerd Font icons
+    #[arg(long)]
+    simple_icons: bool,
 }
 
 fn determine_indent(arg_indent: Option<usize>) -> usize {
     let indent = arg_indent
-        .or_else(|| get_git_config("twig.indent").and_then(|s| s.parse().ok()))
+        .or_else(|| git::get_config("twig.indent").and_then(|s| s.parse().ok()))
         .unwrap_or(3);
 
     indent.clamp(2, 10)
@@ -76,7 +63,7 @@ fn determine_collapse(arg_collapse: bool) -> bool {
     if arg_collapse {
         return true;
     }
-    get_git_config("twig.collapse")
+    git::get_config("twig.collapse")
         .map(|s| s == "true")
         .unwrap_or(false)
 }
@@ -86,7 +73,7 @@ fn determine_theme(arg_theme: Option<ThemeType>) -> Theme {
         return Theme::new(t);
     }
     // Check config
-    if let Some(val) = get_git_config("twig.theme") {
+    if let Some(val) = git::get_config("twig.theme") {
         match val.as_str() {
             "unicode" => return Theme::unicode(),
             "nerd" => return Theme::nerd(),
@@ -107,32 +94,31 @@ fn main() -> Result<()> {
 
     let indent = determine_indent(args.indent);
     let collapse = determine_collapse(args.collapse);
-    let theme = determine_theme(args.theme);
+    let theme = determine_theme(args.theme).with_simple_icons(args.simple_icons);
 
     if args.interactive {
-        // Interactive mode currently does not support filtering (not requested in roadmap yet)
-        return interactive::run(indent, collapse, theme);
+        return tui::run(indent, collapse, theme);
     }
 
-    let result_node = match build_tree_from_git(
-        args.staged_only,
-        args.modified_only,
-        args.untracked_only,
-        !args.open,
-    ) {
-        Ok(Some(node)) => node,
-        Ok(None) => {
-            if !args.open {
-                println!("(working directory clean)");
+    let result_node =
+        match git::build_tree_from_git(args.staged_only, args.modified_only, args.untracked_only) {
+            Ok(Some(node)) => node,
+            Ok(None) => {
+                if !args.open {
+                    if let Ok(header) = git::get_status_header() {
+                        print_context_header(&header);
+                    }
+                    println!("(working directory clean)");
+                }
+                return Ok(());
             }
-            return Ok(());
-        }
-        Err(e) => return Err(e),
-    };
+            Err(e) => return Err(e),
+        };
 
     if args.open {
+        let collapsed_paths = std::collections::HashSet::new();
         let files: Vec<String> = result_node
-            .flatten(indent, collapse, &theme)
+            .flatten(indent, collapse, &theme, &collapsed_paths)
             .into_iter()
             .filter(|node| !node.is_dir)
             .map(|node| node.full_path)
@@ -156,66 +142,18 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    if let Ok(header) = git::get_status_header() {
+        print_context_header(&header);
+    }
     print!("{}", result_node.render_tree(indent, collapse, &theme));
 
     Ok(())
 }
 
-pub fn build_tree_from_git(
-    staged_only: bool,
-    modified_only: bool,
-    untracked_only: bool,
-    print_header: bool,
-) -> Result<Option<node::Node>> {
-    // Run git status --porcelain -b (to get branch info)
-    let status_output = Command::new("git")
-        .args(["status", "--porcelain", "-b", "-u"])
-        .output()
-        .context("Failed to execute git status")?;
-
-    if !status_output.status.success() {
-        let err = String::from_utf8_lossy(&status_output.stderr);
-        return Err(anyhow::anyhow!("Git status failed: {}", err));
-    }
-
-    let status_stdout = String::from_utf8_lossy(&status_output.stdout);
-    let mut lines: Vec<String> = status_stdout.lines().map(|s| s.to_string()).collect();
-
-    if lines.is_empty() {
-        return Ok(None);
-    }
-
-    // Process header
-    if let Some(first) = lines.first() {
-        if first.starts_with("##") {
-            let header = first.clone();
-            // Remove header from lines to be processed by tree parser
-            lines.remove(0);
-
-            if print_header {
-                print_context_header(&header);
-            }
-
-            if lines.is_empty() {
-                if print_header {
-                    println!("(working directory clean)");
-                }
-                return Ok(None);
-            }
-        }
-    }
-
-    // Collect diff stats
-    let mut stats = std::collections::HashMap::new();
-    collect_diff_stats(&mut stats, &["diff", "--numstat"])?;
-    collect_diff_stats(&mut stats, &["diff", "--cached", "--numstat"])?;
-
-    let result_node =
-        parser::build_tree(lines, &stats, staged_only, modified_only, untracked_only)?;
-    Ok(Some(result_node))
-}
-
 fn print_context_header(line: &str) {
+    if line.is_empty() {
+        return;
+    }
     // Format: ## <local>...<remote> [ahead <N>, behind <M>]
     // or: ## <local>
     // or: ## No commits yet on <local>
@@ -271,35 +209,4 @@ fn print_context_header(line: &str) {
     }
 
     println!(); // Newline
-}
-
-fn collect_diff_stats(
-    stats: &mut std::collections::HashMap<String, (usize, usize)>,
-    args: &[&str],
-) -> Result<()> {
-    let output = Command::new("git").args(args).output()?;
-
-    if output.status.success() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        for line in stdout.lines() {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 3 {
-                // components: added deleted path
-                // We re-parse properly below using tabs, so we just check for basic structure here.
-
-                // Re-parsing line properly
-                let parts: Vec<&str> = line.split('\t').collect();
-                if parts.len() >= 3 {
-                    let added = parts[0].parse::<usize>().unwrap_or(0);
-                    let deleted = parts[1].parse::<usize>().unwrap_or(0);
-                    let path = parts[2].to_string();
-
-                    let entry = stats.entry(path).or_insert((0, 0));
-                    entry.0 += added;
-                    entry.1 += deleted;
-                }
-            }
-        }
-    }
-    Ok(())
 }

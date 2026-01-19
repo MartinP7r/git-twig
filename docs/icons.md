@@ -49,7 +49,7 @@ This documents the icons/ligatures used in `--theme nerd` mode.
 | *(default)* |  | U+F07C | nf-fa-folder_open |
 | `src` |  | U+F121 | nf-fa-code |
 | `tests` |  | U+F0C3 | nf-fa-flask |
-| `build` / `dist` |  | U+F1B3 | nf-fa-cubes |
+| `build` / `dist` / `target` |  | U+F1B3 | nf-fa-cubes |
 | `docs` |  | U+F02D | nf-fa-book |
 | `config` |  | U+F013 | nf-fa-cog |
 | `scripts` |  | U+F120 | nf-fa-terminal |

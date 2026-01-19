@@ -3,6 +3,8 @@
 set -e
 
 # Setup repo
+rm -rf /Users/martin/code/_debug/sample-git
+mkdir -p /Users/martin/code/_debug/sample-git
 cd /Users/martin/code/_debug/sample-git
 git init
 git config user.email "bot@example.com"
@@ -25,6 +27,9 @@ echo "public class Main {}" > src/main/java/com/example/Main.java
 echo "test=true" > config/app.ini
 touch src/lib/utils/helpers/StringUtil.php
 touch docs/index.md
+# Prepare files for large diffs
+for i in {1..100}; do echo "line_$i" >> src/large_delete.txt; done
+for i in {1..100}; do echo "line_$i" >> src/large_mod.txt; done
 git add .
 git commit -m "Initial commit"
 
@@ -58,5 +63,17 @@ touch notes.log
 echo "staged change" >> tests/unit/mocks/MockUser.java
 git add tests/unit/mocks/MockUser.java
 echo "unstaged change" >> tests/unit/mocks/MockUser.java
+
+# LARGE ADDITION (+100 lines)
+for i in {1..100}; do echo "new_line_$i" >> src/large_add.txt; done
+
+# LARGE DELETION (-100 lines)
+# (Created in initial commit, see above. Now we delete it or truncate it)
+rm src/large_delete.txt
+
+# LARGE MODIFICATION (+50, -50)
+# Replace 100 lines with 50 new lines
+echo "truncated" > src/large_mod.txt
+for i in {1..50}; do echo "new_content_$i" >> src/large_mod.txt; done
 
 echo "Done! Test repo created at $(pwd)"

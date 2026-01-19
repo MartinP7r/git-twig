@@ -44,8 +44,6 @@ impl Node {
         }
     }
 
-    // ... is_dir, is_file, cmp omitted (unchanged) ...
-
     pub fn is_dir(&self) -> bool {
         matches!(self.node_type, NodeType::Directory { .. })
     }
@@ -66,7 +64,15 @@ impl Node {
 
     fn format_name(&self, theme: &Theme) -> String {
         match &self.node_type {
-            NodeType::Directory { .. } => self.name.bold().to_string(),
+            NodeType::Directory { .. } => {
+                let icon = if theme.is_nerd && !theme.simple_icons {
+                    format!("{} ", icons::get_icon(&self.name))
+                } else {
+                    theme.icon_dir.to_string()
+                };
+                format!("{}{}", icon, self.name.bold())
+            }
+
             NodeType::File { status, stats: _ } => {
                 let staged = status.contains('+');
                 let color_name = if staged {
@@ -75,10 +81,10 @@ impl Node {
                     self.name.red()
                 };
 
-                let icon = if theme.is_nerd {
-                    icons::get_icon(&self.name)
+                let icon = if theme.is_nerd && !theme.simple_icons {
+                    format!("{} ", icons::get_icon(&self.name))
                 } else {
-                    theme.icon_file
+                    theme.icon_file.to_string()
                 };
 
                 let s_base = format!("{}{}", icon, color_name);
@@ -90,11 +96,9 @@ impl Node {
     }
 
     pub fn render_tree(&self, indent: usize, collapse: bool, theme: &Theme) -> String {
-        let flattened = self.flatten(indent, collapse, theme);
+        let collapsed_paths = std::collections::HashSet::new();
+        let flattened = self.flatten(indent, collapse, theme, &collapsed_paths);
 
-        // Calculate max width for alignment
-        // We consider the length of "connector + name"
-        // We assume name.chars().count() is visual width (which is true for ascii/clean unicode without color)
         let max_width = flattened
             .iter()
             .map(|n| n.connector.chars().count() + n.name.chars().count())
@@ -145,26 +149,19 @@ impl Node {
         out
     }
 
-    // Returns (NewNode, Option<OriginalChildren>)
-    // Actually just returns a Node that represents the collapsed view.
     fn get_collapsed_view(&self) -> (Node, Option<Vec<Node>>) {
         if !self.is_dir() {
             return (self.clone(), None);
         }
 
-        // Check if collapsible: Dir with exactly 1 child which is also a Dir
         if let NodeType::Directory { children } = &self.node_type {
             if children.len() == 1 {
                 let only_child = &children[0];
                 if only_child.is_dir() {
-                    // It is collapsible.
-                    // We need to recursively collapse the child.
                     let (child_collapsed, _) = only_child.get_collapsed_view();
 
-                    // Combine names
                     let new_name = format!("{}/{}", self.name, child_collapsed.name);
 
-                    // Create new combined node
                     let combined = Node {
                         name: new_name,
                         full_path: self.full_path.clone(),
@@ -178,14 +175,19 @@ impl Node {
         (self.clone(), None)
     }
 
-    pub fn flatten(&self, indent_size: usize, collapse: bool, theme: &Theme) -> Vec<FlatNode> {
+    pub fn flatten(
+        &self,
+        indent_size: usize,
+        collapse: bool,
+        theme: &Theme,
+        collapsed_paths: &std::collections::HashSet<String>,
+    ) -> Vec<FlatNode> {
         let mut flattened = Vec::new();
         // Add root
         flattened.push(FlatNode {
             name: self.get_display_name_clean(theme),
             name_colored: self.format_name(theme),
             full_path: self.full_path.clone(),
-            indent: 0,
             is_dir: self.is_dir(),
             status: self.get_status_char(),
             raw_status: self.get_raw_status(),
@@ -194,11 +196,20 @@ impl Node {
         });
 
         if let NodeType::Directory { children } = &self.node_type {
-            self.flatten_children(children, indent_size, collapse, "", &mut flattened, theme);
+            self.flatten_children(
+                children,
+                indent_size,
+                collapse,
+                "",
+                &mut flattened,
+                theme,
+                collapsed_paths,
+            );
         }
         flattened
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn flatten_children(
         &self,
         children: &[Node],
@@ -207,6 +218,7 @@ impl Node {
         prefix: &str,
         out: &mut Vec<FlatNode>,
         theme: &Theme,
+        collapsed_paths: &std::collections::HashSet<String>,
     ) {
         let count = children.len();
         for (i, child) in children.iter().enumerate() {
@@ -223,7 +235,6 @@ impl Node {
                 _ => None,
             };
 
-            // Prepare the connector
             let connector_symbol = if is_last {
                 theme.tree_end
             } else {
@@ -236,7 +247,6 @@ impl Node {
                 name: display_node.get_display_name_clean(theme),
                 name_colored: display_node.format_name(theme),
                 full_path: display_node.full_path.clone(),
-                indent: 0, // Not strictly needed if we have full_connector
                 is_dir: display_node.is_dir(),
                 status: display_node.get_status_char(),
                 raw_status: display_node.get_raw_status(),
@@ -244,33 +254,48 @@ impl Node {
                 stats: display_node.get_stats(),
             });
 
-            if let Some(recurs_children) = children_to_render {
-                let extension = if is_last {
-                    " ".to_string()
-                } else {
-                    theme.tree_vertical.to_string()
-                };
-                let new_prefix = format!("{}{}{}", prefix, extension, " ".repeat(indent_size - 1));
-                self.flatten_children(
-                    recurs_children,
-                    indent_size,
-                    collapse,
-                    &new_prefix,
-                    out,
-                    theme,
-                );
+            if let Some(grand_children) = children_to_render {
+                if !collapsed_paths.contains(&display_node.full_path) {
+                    let new_prefix = if is_last {
+                        format!("{}  {} ", prefix, " ".repeat(indent_size - 2))
+                    } else {
+                        format!(
+                            "{}{} {} ",
+                            prefix,
+                            theme.tree_vertical,
+                            " ".repeat(indent_size - 2)
+                        )
+                    };
+
+                    self.flatten_children(
+                        grand_children,
+                        indent_size,
+                        collapse,
+                        &new_prefix,
+                        out,
+                        theme,
+                        collapsed_paths,
+                    );
+                }
             }
         }
     }
 
     pub fn get_display_name_clean(&self, theme: &Theme) -> String {
         let icon = match &self.node_type {
-            NodeType::Directory { .. } => theme.icon_dir,
-            NodeType::File { .. } => {
-                if theme.is_nerd {
-                    icons::get_icon(&self.name)
+            NodeType::Directory { .. } => {
+                let icon = if theme.is_nerd && !theme.simple_icons {
+                    format!("{} ", icons::get_icon(&self.name))
                 } else {
-                    theme.icon_file
+                    theme.icon_dir.to_string()
+                };
+                icon
+            }
+            NodeType::File { .. } => {
+                if theme.is_nerd && !theme.simple_icons {
+                    format!("{} ", icons::get_icon(&self.name))
+                } else {
+                    theme.icon_file.to_string()
                 }
             }
         };
@@ -291,7 +316,7 @@ impl Node {
                 } else if status.contains('?') {
                     '?'
                 } else {
-                    'M' // Default to Modified if not staged
+                    'M'
                 }
             }
             NodeType::Directory { .. } => ' ',
@@ -309,8 +334,6 @@ impl Node {
                 let mut all_staged = true;
                 for child in children {
                     let s = child.get_raw_status();
-                    // If any child is NOT staged (doesn't contain '+'),
-                    // then the directory is not fully staged.
                     if !s.contains('+') {
                         all_staged = false;
                         break;
@@ -331,6 +354,17 @@ impl Node {
             NodeType::Directory { .. } => None,
         }
     }
+
+    pub fn get_all_dir_paths(&self, paths: &mut std::collections::HashSet<String>) {
+        if let NodeType::Directory { children } = &self.node_type {
+            if !self.full_path.is_empty() && self.full_path != "." {
+                paths.insert(self.full_path.clone());
+            }
+            for child in children {
+                child.get_all_dir_paths(paths);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -339,15 +373,13 @@ mod tests {
 
     #[test]
     fn test_node_directory_status() {
-        // Case 1: All children staged
         let child1 = Node::new_file("a".to_string(), "a".to_string(), "M+".to_string(), None);
         let child2 = Node::new_file("b".to_string(), "b".to_string(), "A+".to_string(), None);
         let dir_staged = Node::new_dir("dir".to_string(), "dir".to_string(), vec![child1, child2]);
         assert_eq!(dir_staged.get_raw_status(), "M+");
 
-        // Case 2: Mixed (one staged, one unstaged)
         let child3 = Node::new_file("c".to_string(), "c".to_string(), "M+".to_string(), None);
-        let child4 = Node::new_file("d".to_string(), "d".to_string(), "M".to_string(), None); // Unstaged
+        let child4 = Node::new_file("d".to_string(), "d".to_string(), "M".to_string(), None);
         let dir_mixed = Node::new_dir(
             "dir_mixed".to_string(),
             "dir_mixed".to_string(),
@@ -355,7 +387,6 @@ mod tests {
         );
         assert_eq!(dir_mixed.get_raw_status(), "M");
 
-        // Case 3: All unstaged
         let child5 = Node::new_file("e".to_string(), "e".to_string(), "??".to_string(), None);
         let dir_unstaged = Node::new_dir(
             "dir_unstaged".to_string(),
@@ -364,7 +395,6 @@ mod tests {
         );
         assert_eq!(dir_unstaged.get_raw_status(), "M");
 
-        // Case 4: Recursive
         let nested_dir = Node::new_dir(
             "nested".to_string(),
             "nested".to_string(),
@@ -377,7 +407,6 @@ mod tests {
         );
         let parent_dir =
             Node::new_dir("parent".to_string(), "parent".to_string(), vec![nested_dir]);
-        // nested child is M (unstaged), so nested is M. Parent sees M (no +), so parent is M.
         assert_eq!(parent_dir.get_raw_status(), "M");
 
         let nested_dir_staged = Node::new_dir(
@@ -395,8 +424,76 @@ mod tests {
             "parent_s".to_string(),
             vec![nested_dir_staged],
         );
-        // nested child is M+ (staged), so nested is M+. Parent sees M+ (has +), so parent is M+.
         assert_eq!(parent_dir_staged.get_raw_status(), "M+");
+    }
+
+    #[test]
+    fn test_flatten_collapsed() {
+        let theme = Theme::ascii();
+
+        let grandchild = Node {
+            name: "grandchild_file".to_string(),
+            full_path: "root/child_dir/grandchild_file".to_string(),
+            node_type: NodeType::File {
+                status: "M ".to_string(),
+                stats: None,
+            },
+        };
+
+        let child_dir = Node {
+            name: "child_dir".to_string(),
+            full_path: "root/child_dir".to_string(),
+            node_type: NodeType::Directory {
+                children: vec![grandchild],
+            },
+        };
+
+        let child_file = Node {
+            name: "child_file".to_string(),
+            full_path: "root/child_file".to_string(),
+            node_type: NodeType::File {
+                status: "??".to_string(),
+                stats: None,
+            },
+        };
+
+        let root = Node {
+            name: "root".to_string(),
+            full_path: "root".to_string(),
+            node_type: NodeType::Directory {
+                children: vec![child_dir, child_file],
+            },
+        };
+
+        let empty_set = std::collections::HashSet::new();
+        let flattened_full = root.flatten(2, false, &theme, &empty_set);
+        assert_eq!(flattened_full.len(), 4);
+        assert_eq!(flattened_full[1].name, "child_dir");
+        assert_eq!(flattened_full[2].name, "grandchild_file (M )");
+
+        let mut collapsed = std::collections::HashSet::new();
+        collapsed.insert("root/child_dir".to_string());
+        let flattened_collapsed = root.flatten(2, false, &theme, &collapsed);
+        assert_eq!(flattened_collapsed.len(), 3);
+        assert_eq!(flattened_collapsed[1].name, "child_dir");
+        assert_eq!(flattened_collapsed[2].name, "child_file (??)");
+    }
+
+    #[test]
+    fn test_icon_spacing() {
+        let theme = Theme::nerd();
+
+        let file_node = Node {
+            name: "test.rs".to_string(),
+            full_path: "test.rs".to_string(),
+            node_type: NodeType::File {
+                status: "??".to_string(),
+                stats: None,
+            },
+        };
+
+        let clean_name = file_node.get_display_name_clean(&theme);
+        assert_eq!(clean_name, " test.rs (??)");
     }
 }
 
@@ -405,7 +502,6 @@ pub struct FlatNode {
     pub name: String,
     pub name_colored: String,
     pub full_path: String,
-    pub indent: usize,
     pub is_dir: bool,
     pub status: char,
     pub raw_status: String,
