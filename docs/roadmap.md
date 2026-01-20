@@ -39,6 +39,7 @@ Focus: Making git-twig easier to install and more visible.
 - [ ] **Diff Summary Status Bar**: 
     - Repurpose the bottom bar into a dynamic status bar.
     - Show global diff summary: `X files changed, Y insertions(+), Z deletions(-)`.
+- [ ] **Searchbar UX**: Add a blinking or static cursor/caret to the search input to clearly visualize spaces and position.
 
 ---
 
