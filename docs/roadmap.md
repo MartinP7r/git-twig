@@ -1,54 +1,44 @@
 # Product Roadmap
 
-## Q1 - The "Context" Release (v0.2.0)
-Focus: Providing immediate context to the user before they commit.
+## Shipped Releases 🚢
 
-- [x] **Context Header**
-    - Display current branch name.
-    - Show ahead/behind counts (`⬆️ 2 ⬇️ 0`).
-    - Show upstream branch status.
-    - *Note: Make fancy icons (⎇) optional for font compatibility.*
-- [x] **Smart Filtering**
-    - `--staged-only`: View only files ready to commit.
-    - `--modified-only`: Hide untracked files to reduce noise.
-    - `--untracked-only`: View only untracked files.
+### [v1.0.0] - The "Workflow" Milestone (Current)
+Focus: Transforming the tool from a viewer into an actionable interactive terminal application.
 
-## Q2 - The "Workflow" Release (v1.0.0)
-Focus: Transforming the tool from a viewer into an actionable workflow step.
+- [x] **Interactive Mode (TUI)**: Full keyboard navigation (Vim bindings).
+- [x] **Real-time Staging**: Toggle `git add`/`reset` directly from the tree.
+- [x] **Inline Diffs**: View changes with syntax highlighting.
+- [x] **Split View**: Vertical panes for Staged vs Unstaged changes.
+- [x] **Fuzzy Search**: Quickly filter files with `/`.
+- [x] **Architectural Refactor**: Modularized codebase for better maintenance.
+- [x] **Global Folding**: Expand/Collapse all nodes with `Shift+H/L`.
+- [x] **Theme Engine**: Support for ASCII, Unicode, and Nerd Font themes.
+- [x] **Editor Integration**: Open all modified files in `$EDITOR`.
 
-- [x] **CI Automation**: GitHub Action to run `cargo test` on every PR (separate from release).
-- [x] **Interactive Mode (TUI)**
-    - [x] Navigate the tree with arrow keys or **Vim bindings** (`h`, `j`, `k`, `l`).
-    - [x] Toggle staging (`git add`/`reset`) for **files and whole folders** with `<Space>` (unified toggle).
-    - [x] View diffs inline with `<Enter>` (with syntax highlighting).
-- [x] **Editor Integration**
-    - [x] Flag `--open` (or `-o`) to open all modified files in `$EDITOR`.
+### [v0.1.0 - v0.2.0] - Foundation (Shipped)
+- [x] **Context Header**: Branch info and ahead/behind counts.
+- [x] **Smart Filtering**: `--staged-only`, `--modified-only`, etc.
+- [x] **Visual Polish**: Vertical alignment, semantic icons, and diff bars.
 
-## Visual Polish & Theming
-Focus: Making the tool look modern and customizable ("git-twig").
+---
 
-- [x] **Configurable Themes**: Support `--theme` flag.
-    - `ascii`: Default/Safe.
-    - `unicode`: Rounded corners (`╰──`), Block diff bars (`◼◼◼◻`).
-    - `nerd`: Full icons for files/folders and status glyphs.
-- [x] **Semantic Icons**: Support file-type icons or nerd-font ligatures (e.g. 🦀 for Rust, 💎 for Ruby) and folder icons (⚙️ for `config`).
-- [x] **Compact Paths**: Flatten empty directory chains (e.g., `src/main/java...` on one line) to reduce nesting noise.
-- [x] **Vertical Alignment**: Align diff stats separator (`|`) vertically across all rows.
-- [x] **High-Res Diff Bars**: Implement Unicode block element rendering.
-- [x] **Brand Identity**: Design logo and assets.
+## Upcoming: v1.1.0 - Distribution & Presence 🚀
+Focus: Making git-twig easier to install and more visible.
 
-## Future Ideas / Backlog
-- [x] **File Jump**: Jump between files (skipping directories) with `d`/`u`.
-- [x] **Tree Folding**: Expand (`l`) and collapse (`h`) directories in interactive mode.
-- [x] **Theme Toggle**: Cycle through themes with `t` in interactive mode.
-- [ ] **Homebrew Formula**: Publish to Homebrew using `cargo-binstall`.
-- [x] **Analyze and improve current architecture**: Refactor core components for better maintainability and performance.
-- [x] **Analyze the code base for performance improvements**: Identify and resolve bottlenecks in tree building and TUI rendering.
-- [ ] **GitHub Pages**: Create a beautiful landing page on GitHub Pages.
-- [ ] **Deep Example Structure**: Expand `sample-git/docs` with multi-level sub-directories (3-4 levels) containing a mix of `.md`, `.php`, `.py`, `.rs`, `.xml`, `.json`, `.go`, `.swift`, `.js`, and `.rb` files to better test/demo icon mapping and tree depth.
-- [ ] **Collapsed Folder Lines**: Option to render empty directory chains as a single `/`-separated line (e.g., `📁 src/main/java`) with files listed below.
-- [ ] **Git Worktrees Support**: Visualize multiple worktrees.
-- [ ] **Configurable Themes**: Allow user-defined colors/icons via `git config`.
-- [ ] **Jason/YAML Output**: For machine parsing/integration with other tools.
-- [x] **Split View**: Option to show staged and unstaged files in vertically separate sections (Toggle with `v`).
-- [x] **Fuzzy Search**: Filter file list in interactive mode with `/`.
+- [ ] **Homebrew Formula**: Official tap for macOS users via `cargo-binstall`.
+- [ ] **GitHub Pages**: Beautiful landing page and documentation.
+- [x] **Deep Example Structure**: Richer `sample-git` for better demos.
+- [ ] **Horizontal Folder Dividers**: 
+    - Render empty directory chains as a single horizontal line with custom dividers.
+    - Path should appear on one line, with files starting on the immediate next line.
+    - Toggle/Configuration for this "Ultra-Compact" view.
+- [ ] **Configurable Keybindings**: Allow customizing TUI keys via `git config`.
+
+---
+
+## Future Ideas / Backlog 📒
+- [ ] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.
+- [ ] **Custom Themes**: Allow user-defined colors/icons via `git config`.
+- [ ] **Machine Readable Output**: JSON/YAML export for scripting integration.
+- [ ] **Multi-Selection**: Selection ranges or marking multiple files for batch actions.
+- [ ] **Action History**: Undo/Redo support for staging operations.
