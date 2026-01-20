@@ -145,6 +145,13 @@ nav {
     margin: 0 auto 2.5rem;
 }
 
+.terminal {
+    background: #1a1a1a;
+    border-radius: 8px;
+    overflow: hidden;
+    text-align: left;
+}
+
 /* Terminal Window & Screen */
 .terminal-window {
     background: #000;
@@ -154,6 +161,7 @@ nav {
     margin: 4rem auto;
     max-width: 900px;
     border: 1px solid var(--border);
+    text-align: left;
 }
 
 .terminal-titlebar {
