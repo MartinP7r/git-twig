@@ -1,0 +1,383 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    /* Color Palette - Deep Forest / Digital Nature */
+    --primary: #22c55e;
+    --primary-glow: rgba(34, 197, 94, 0.4);
+    --bg-dark: #061612;
+    --surface: #0f2922;
+    --surface-light: #163a30;
+    --text-bright: #ecfdf5;
+    --text-muted: #94a3b8;
+    --border: rgba(34, 197, 94, 0.2);
+
+    /* Layout Constants */
+    --max-width: 1200px;
+    --navbar-height: 80px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-bright);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Background Overlay for the Digital Nature Aesthetic */
+.bg-mesh {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.05) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+/* Base Components */
+.container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: var(--bg-dark);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+
+.btn-secondary:hover {
+    background: rgba(34, 197, 94, 0.1);
+}
+
+/* Navbar */
+nav {
+    height: var(--navbar-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-links a:hover {
+    color: var(--primary);
+}
+
+/* Hero Section */
+.hero {
+    padding: 6rem 0 4rem;
+    text-align: center;
+    position: relative;
+}
+
+.hero-content h1 {
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(to bottom right, #fff, #22c55e);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-content p {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    max-width: 700px;
+    margin: 0 auto 2.5rem;
+}
+
+/* Terminal Window & Screen */
+.terminal-window {
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.7), 0 0 1px var(--primary);
+    margin: 4rem auto;
+    max-width: 900px;
+    border: 1px solid var(--border);
+}
+
+.terminal-titlebar {
+    background: #1a1a1a;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.terminal-screen {
+    background: #000;
+    padding: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: #d1d5db;
+    overflow-x: auto;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* TUI Application Elements (Inside the screen) */
+.tui-block {
+    border: 1px solid #333;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+    position: relative;
+    border-radius: 4px;
+}
+
+.tui-block-title {
+    position: absolute;
+    top: -0.8rem;
+    left: 1rem;
+    background: #000;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: bold;
+}
+
+.tui-header {
+    border: 1px solid var(--primary);
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.tui-content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+}
+
+.tui-footer {
+    margin-top: auto;
+    border: 1px solid #333;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    display: flex;
+    gap: 1rem;
+    color: var(--text-muted);
+}
+
+.tui-pane {
+    border: 1px solid #333;
+    padding: 0.75rem;
+    border-radius: 4px;
+    flex: 1;
+    position: relative;
+}
+
+.tui-pane.active {
+    border-color: #ffbd2e;
+}
+
+.tui-line {
+    white-space: pre;
+    margin-bottom: 0.2rem;
+}
+
+.tui-cursor {
+    background: #444;
+    color: #fff;
+    padding: 0 4px;
+    border-radius: 2px;
+}
+
+.tui-key {
+    color: #fff;
+    font-weight: 600;
+}
+
+.tui-val {
+    color: var(--primary);
+}
+
+.tui-view {
+    display: none;
+    height: 100%;
+    flex-direction: column;
+}
+
+.tui-view.active {
+    display: flex;
+}
+
+.floating {
+    animation: float 6s ease-in-out infinite;
+}
+
+/* Dot styles (from original terminal mockup) */
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.dot-red {
+    background: #ff5f56;
+}
+
+.dot-yellow {
+    background: #ffbd2e;
+}
+
+.dot-green {
+    background: #27c93f;
+}
+
+/* Terminal line styles (from original terminal mockup) */
+.line {
+    margin-bottom: 0.25rem;
+    white-space: pre;
+}
+
+.t-green {
+    color: var(--primary);
+}
+
+.t-blue {
+    color: #60a5fa;
+}
+
+.t-yellow {
+    color: #fbbf24;
+}
+
+.t-gray {
+    color: #6b7280;
+}
+
+/* Features */
+.features {
+    padding: 8rem 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.feature-card {
+    background: var(--surface);
+    padding: 2.5rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    background: var(--surface-light);
+}
+
+.feature-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
+/* Animations for Showcase */
+.showcase-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.tab-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-bright);
+    padding: 0.75rem 1.5rem;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.tab-btn.active {
+    background: var(--primary);
+    color: var(--bg-dark);
+    border-color: var(--primary);
+}
+
+/* Animations */
+/* Responsive */
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+    }
+
+    .hero {
+        padding: 4rem 0;
+    }
+
+    .features {
+        grid-template-columns: 1fr;
+    }
+}
