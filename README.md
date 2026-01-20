@@ -15,11 +15,16 @@ It includes a visual diff bar (e.g., `++++----`) to show the scale of changes.
 
 ## Installation
 
+### via Homebrew (Recommended)
+```bash
+brew tap MartinP7r/homebrew-tap
+brew install git-twig
+```
+
 ### From Source (Rust)
 ```bash
-cargo install --path .
+cargo install git-twig
 ```
-*(Homebrew Tap coming soon!)*
 
 ## Usage
 
