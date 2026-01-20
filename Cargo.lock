@@ -548,6 +548,7 @@ dependencies = [
  "crossterm",
  "image",
  "ratatui",
+ "unicode-width",
 ]
 
 [[package]]

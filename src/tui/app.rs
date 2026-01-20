@@ -1,6 +1,7 @@
 use anyhow::Result;
 use ratatui::widgets::ListState;
 use std::collections::HashSet;
+use unicode_width::UnicodeWidthStr;
 
 use crate::git;
 use crate::node::FlatNode;
@@ -88,6 +89,8 @@ pub struct App {
     pub theme: Theme,
     pub theme_type: ThemeType,
     pub max_name_width: usize,
+    pub show_help: bool,
+    pub global_stats: Option<(usize, usize)>,
 }
 
 impl App {
@@ -113,6 +116,8 @@ impl App {
             theme: theme.clone(),
             theme_type: ThemeType::Unicode, // Will be set by determine_theme usually
             max_name_width: 0,
+            show_help: false,
+            global_stats: None,
         };
         app.refresh()?;
         Ok(app)
@@ -156,7 +161,7 @@ impl App {
                 self.max_name_width = self
                     .unified_nodes
                     .iter()
-                    .map(|n| n.connector.chars().count() + n.name.chars().count())
+                    .map(|n| n.connector.width() + n.name.width())
                     .max()
                     .unwrap_or(0);
 
@@ -194,13 +199,13 @@ impl App {
                 let max_staged = self
                     .staged_nodes
                     .iter()
-                    .map(|n| n.connector.chars().count() + n.name.chars().count())
+                    .map(|n| n.connector.width() + n.name.width())
                     .max()
                     .unwrap_or(0);
                 let max_unstaged = self
                     .unstaged_nodes
                     .iter()
-                    .map(|n| n.connector.chars().count() + n.name.chars().count())
+                    .map(|n| n.connector.width() + n.name.width())
                     .max()
                     .unwrap_or(0);
 
@@ -208,15 +213,22 @@ impl App {
 
                 let staged_active = self.focus == Focus::Staged;
                 Self::adjust_selection(&self.staged_nodes, &mut self.staged_state, staged_active);
-
-                let unstaged_active = self.focus == Focus::Unstaged;
-                Self::adjust_selection(
-                    &self.unstaged_nodes,
-                    &mut self.unstaged_state,
-                    unstaged_active,
-                );
             }
         }
+
+        // Collect global stats
+        let mut stats_map = std::collections::HashMap::new();
+        let _ = git::collect_diff_stats(&mut stats_map, &["diff", "--numstat"]);
+        let _ = git::collect_diff_stats(&mut stats_map, &["diff", "--cached", "--numstat"]);
+        
+        let mut total_added = 0;
+        let mut total_deleted = 0;
+        for (a, d) in stats_map.values() {
+            total_added += a;
+            total_deleted += d;
+        }
+        self.global_stats = Some((total_added, total_deleted));
+
         Ok(())
     }
 
@@ -516,6 +528,10 @@ impl App {
         self.collapsed_paths.clear();
         self.refresh()?;
         Ok(())
+    }
+
+    pub fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
     }
 }
 

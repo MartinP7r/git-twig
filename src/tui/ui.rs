@@ -6,6 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
+use unicode_width::UnicodeWidthStr;
 
 use super::app::{App, AppLayout, Focus, ViewMode};
 use crate::node::FlatNode;
@@ -30,7 +31,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         AppLayout::Unified => {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(0), Constraint::Length(3)])
+                .constraints([Constraint::Min(0), Constraint::Length(4)])
                 .split(f.size());
 
             let title = format!(
@@ -57,9 +58,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Percentage(50),
-                    Constraint::Percentage(50),
-                    Constraint::Length(3),
+                    Constraint::Percentage(45),
+                    Constraint::Percentage(45),
+                    Constraint::Length(4),
                 ])
                 .split(f.size());
 
@@ -92,6 +93,71 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             render_bottom_bar(f, app, chunks[2]);
         }
     }
+
+    if app.show_help {
+        render_help_modal(f, app);
+    }
+}
+
+fn render_help_modal(f: &mut Frame, _app: &App) {
+    let area = centered_rect(60, 60, f.size());
+    let help_text = vec![
+        Line::from(vec![
+            Span::styled("git-twig ", Style::default().add_modifier(Modifier::BOLD).fg(Color::Green)),
+            Span::raw(format!("v{}", env!("CARGO_PKG_VERSION"))),
+        ]),
+        Line::from(""),
+        Line::from(vec![Span::styled("Navigation", Style::default().add_modifier(Modifier::UNDERLINED))]),
+        Line::from("  j/k, Up/Down : Move cursor"),
+        Line::from("  h/l, Left/Right : Fold/Expand directory"),
+        Line::from("  H/L : Fold/Expand All"),
+        Line::from("  d/u : Jump to next/prev file"),
+        Line::from(""),
+        Line::from(vec![Span::styled("Actions", Style::default().add_modifier(Modifier::UNDERLINED))]),
+        Line::from("  Space : Stage/Unstage file or directory"),
+        Line::from("  Enter : View inline diff"),
+        Line::from("  /     : Search files"),
+        Line::from("  f     : Toggle Filter (Unified view)"),
+        Line::from("  v     : Toggle Layout (Unified/Split)"),
+        Line::from("  t     : Cycle Theme (Ascii/Unicode/Rounded/Nerd)"),
+        Line::from("  Tab   : Switch Pane (Split view)"),
+        Line::from(""),
+        Line::from(vec![Span::styled("General", Style::default().add_modifier(Modifier::UNDERLINED))]),
+        Line::from("  ?     : Toggle this help"),
+        Line::from("  q, Esc: Quit / Back"),
+    ];
+
+    let block = Block::default()
+        .title(" Help ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow));
+
+    let paragraph = Paragraph::new(help_text)
+        .block(block)
+        .wrap(ratatui::widgets::Wrap { trim: true });
+
+    f.render_widget(ratatui::widgets::Clear, area); // Clear the background
+    f.render_widget(paragraph, area);
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }
 
 fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
@@ -107,59 +173,37 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
             .block(Block::default().borders(Borders::ALL).title(" Search "));
         f.render_widget(p, area);
     } else {
-        let help_text = if app.layout == AppLayout::Unified {
-            vec![
-                Span::raw(" [j/k]"),
-                Span::styled(" Nav", Style::default().fg(Color::Gray)),
-                Span::raw(" [h/l]"),
-                Span::styled(" Fold", Style::default().fg(Color::Gray)),
-                Span::raw(" [H/L]"),
-                Span::styled(" FoldAll", Style::default().fg(Color::Gray)),
-                Span::raw(" [d/u]"),
-                Span::styled(" Jump", Style::default().fg(Color::Gray)),
-                Span::raw("  [Space]"),
-                Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
-                Span::raw("  [f]"),
-                Span::styled(" Filter", Style::default().fg(Color::Yellow)),
-                Span::raw("  [v]"),
-                Span::styled(" View", Style::default().fg(Color::Green)),
-                Span::raw("  [/]"),
-                Span::styled(" Search", Style::default().fg(Color::Cyan)),
-                Span::raw("  [t]"),
-                Span::styled(" Theme", Style::default().fg(Color::LightMagenta)),
-                Span::raw("  [Enter]"),
-                Span::styled(" Diff", Style::default().fg(Color::Blue)),
-                Span::raw("  [q]"),
-                Span::styled(" Quit", Style::default().fg(Color::Gray)),
-            ]
+        let help_text = vec![
+            Span::raw(" [j/k]"),
+            Span::styled(" Nav", Style::default().fg(Color::Gray)),
+            Span::raw(" [Space]"),
+            Span::styled(" Stage", Style::default().fg(Color::Magenta)),
+            Span::raw(" [v]"),
+            Span::styled(" View", Style::default().fg(Color::Green)),
+            Span::raw(" [/]"),
+            Span::styled(" Search", Style::default().fg(Color::Cyan)),
+            Span::raw(" [?]"),
+            Span::styled(" Help", Style::default().fg(Color::Yellow)),
+            Span::raw(" [q]"),
+            Span::styled(" Quit", Style::default().fg(Color::Gray)),
+        ];
+
+        let summary = if let Some((added, deleted)) = app.global_stats {
+            format!(" | {} files changed, {}(+), {}(-) ", 
+                app.staged_nodes.len() + app.unstaged_nodes.len(), 
+                added, deleted
+            )
         } else {
-            vec![
-                Span::raw(" [Tab]"),
-                Span::styled(" Switch Pane", Style::default().fg(Color::Yellow)),
-                Span::raw("  [j/k]"),
-                Span::styled(" Nav", Style::default().fg(Color::Gray)),
-                Span::raw(" [h/l]"),
-                Span::styled(" Fold", Style::default().fg(Color::Gray)),
-                Span::raw(" [H/L]"),
-                Span::styled(" FoldAll", Style::default().fg(Color::Gray)),
-                Span::raw(" [d/u]"),
-                Span::styled(" Jump", Style::default().fg(Color::Gray)),
-                Span::raw("  [Space]"),
-                Span::styled(" Stage/Unstage", Style::default().fg(Color::Magenta)),
-                Span::raw("  [v]"),
-                Span::styled(" View", Style::default().fg(Color::Green)),
-                Span::raw("  [/]"),
-                Span::styled(" Search", Style::default().fg(Color::Cyan)),
-                Span::raw("  [t]"),
-                Span::styled(" Theme", Style::default().fg(Color::LightMagenta)),
-                Span::raw("  [Enter]"),
-                Span::styled(" Diff", Style::default().fg(Color::Blue)),
-                Span::raw("  [q]"),
-                Span::styled(" Quit", Style::default().fg(Color::Gray)),
-            ]
+            String::new()
         };
-        let help = Paragraph::new(Line::from(help_text))
-            .block(Block::default().borders(Borders::ALL).title(" Help "));
+
+        let mut lines = vec![Line::from(help_text)];
+        if !summary.is_empty() {
+            lines.push(Line::from(Span::styled(summary, Style::default().fg(Color::Gray))));
+        }
+
+        let help = Paragraph::new(lines)
+            .block(Block::default().borders(Borders::ALL).title(" Hints "));
         f.render_widget(help, area);
     }
 }
@@ -197,11 +241,10 @@ fn render_list(
             };
             let name = Span::styled(&node.name, name_style);
 
-            let width = node.connector.chars().count() + node.name.chars().count();
+            let mut spans = vec![status_indicator, Span::raw(" "), connector, name];
+            let width = node.connector.width() + node.name.width();
             let padding_len = max_name_width.saturating_sub(width);
             let padding = " ".repeat(padding_len);
-
-            let mut spans = vec![status_indicator, Span::raw(" "), connector, name];
 
             if let Some((added, deleted)) = node.stats {
                 let total = added + deleted;

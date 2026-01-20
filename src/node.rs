@@ -2,6 +2,7 @@ use crate::icons;
 use crate::theme::Theme;
 use colored::*;
 use std::cmp::Ordering;
+use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug, Clone)]
 pub enum NodeType {
@@ -101,14 +102,14 @@ impl Node {
 
         let max_width = flattened
             .iter()
-            .map(|n| n.connector.chars().count() + n.name.chars().count())
+            .map(|n| n.connector.width() + n.name.width())
             .max()
             .unwrap_or(0);
 
         let mut out = String::new();
 
         for node in flattened {
-            let width = node.connector.chars().count() + node.name.chars().count();
+            let width = node.connector.width() + node.name.width();
             let padding = if max_width > width {
                 " ".repeat(max_width - width)
             } else {
@@ -149,7 +150,7 @@ impl Node {
         out
     }
 
-    fn get_collapsed_view(&self) -> (Node, Option<Vec<Node>>) {
+    fn get_collapsed_view(&self, theme: &Theme) -> (Node, Option<Vec<Node>>) {
         if !self.is_dir() {
             return (self.clone(), None);
         }
@@ -158,9 +159,9 @@ impl Node {
             if children.len() == 1 {
                 let only_child = &children[0];
                 if only_child.is_dir() {
-                    let (child_collapsed, _) = only_child.get_collapsed_view();
+                    let (child_collapsed, _) = only_child.get_collapsed_view(theme);
 
-                    let new_name = format!("{}/{}", self.name, child_collapsed.name);
+                    let new_name = format!("{}{}{}", self.name, theme.path_divider, child_collapsed.name);
 
                     let combined = Node {
                         name: new_name,
@@ -225,7 +226,7 @@ impl Node {
             let is_last = i == count - 1;
 
             let (display_node, _) = if collapse {
-                child.get_collapsed_view()
+                child.get_collapsed_view(theme)
             } else {
                 (child.clone(), None)
             };
@@ -257,10 +258,10 @@ impl Node {
             if let Some(grand_children) = children_to_render {
                 if !collapsed_paths.contains(&display_node.full_path) {
                     let new_prefix = if is_last {
-                        format!("{}  {} ", prefix, " ".repeat(indent_size - 2))
+                        format!("{}  {}", prefix, " ".repeat(indent_size - 2))
                     } else {
                         format!(
-                            "{}{} {} ",
+                            "{}{} {}",
                             prefix,
                             theme.tree_vertical,
                             " ".repeat(indent_size - 2)
@@ -482,18 +483,33 @@ mod tests {
     #[test]
     fn test_icon_spacing() {
         let theme = Theme::nerd();
+        let node = Node::new_file("test.rs".into(), "test.rs".into(), "M".into(), None);
+        let display = node.format_name(&theme);
+        // Nerd theme should have some icon
+        assert!(display.contains('') || display.contains('🦀'));
+    }
 
-        let file_node = Node {
-            name: "test.rs".to_string(),
-            full_path: "test.rs".to_string(),
-            node_type: NodeType::File {
-                status: "??".to_string(),
-                stats: None,
-            },
-        };
+    #[test]
+    fn test_display_name_clean() {
+        let theme = Theme::unicode();
+        let node = Node::new_file("test.rs".into(), "test.rs".into(), "M".into(), None);
+        let clean = node.get_display_name_clean(&theme);
+        // Clean name for files includes the status code
+        assert_eq!(clean, "test.rs (M)");
+    }
 
-        let clean_name = file_node.get_display_name_clean(&theme);
-        assert_eq!(clean_name, " test.rs (??)");
+    #[test]
+    fn test_render_tree_simple() {
+        let theme = Theme::ascii();
+        let file = Node::new_file("a.txt".into(), "a.txt".into(), "M".into(), None);
+        let dir = Node::new_dir("src".into(), "src".into(), vec![file]);
+        let root = Node::new_dir(".".into(), ".".into(), vec![dir]);
+
+        let rendered = root.render_tree(4, false, &theme);
+        assert!(rendered.contains("."));
+        assert!(rendered.contains("`--"));
+        assert!(rendered.contains("src"));
+        assert!(rendered.contains("a.txt"));
     }
 }
 

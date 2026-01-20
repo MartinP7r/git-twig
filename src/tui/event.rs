@@ -76,9 +76,16 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                             KeyCode::Enter => {
                                 let _ = app.show_diff();
                             }
+                            KeyCode::Char('?') => {
+                                app.toggle_help();
+                            }
                             KeyCode::Esc => {
-                                app.search_query.clear();
-                                app.reset_selection();
+                                if app.show_help {
+                                    app.show_help = false;
+                                } else {
+                                    app.search_query.clear();
+                                    app.reset_selection();
+                                }
                             }
                             _ => {}
                         },

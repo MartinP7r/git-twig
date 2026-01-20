@@ -323,4 +323,19 @@ mod tests {
             panic!("Root should be a directory");
         }
     }
+
+    #[test]
+    fn test_build_tree_with_stats() {
+        let lines = vec![" M main.rs".to_string()];
+        let mut stats = HashMap::new();
+        stats.insert("main.rs".to_string(), (10, 5));
+
+        let node = build_tree(lines, &stats, false, false, false).unwrap();
+        if let NodeType::Directory { children } = node.node_type {
+            let file = children.iter().find(|c| c.name == "main.rs").expect("Should find main.rs");
+            assert_eq!(file.get_stats(), Some((10, 5)));
+        } else {
+            panic!("Root should be a directory");
+        }
+    }
 }

@@ -5,6 +5,7 @@ pub enum ThemeType {
     #[default]
     Ascii,
     Unicode,
+    Rounded,
     Nerd,
 }
 
@@ -12,7 +13,8 @@ impl ThemeType {
     pub fn next(&self) -> Self {
         match self {
             ThemeType::Ascii => ThemeType::Unicode,
-            ThemeType::Unicode => ThemeType::Nerd,
+            ThemeType::Unicode => ThemeType::Rounded,
+            ThemeType::Rounded => ThemeType::Nerd,
             ThemeType::Nerd => ThemeType::Ascii,
         }
     }
@@ -28,6 +30,7 @@ pub struct Theme {
     pub icon_file: &'static str,
     pub diff_bar_plus: char,
     pub diff_bar_minus: char,
+    pub path_divider: &'static str,
     pub is_nerd: bool,
     pub simple_icons: bool,
 }
@@ -37,6 +40,7 @@ impl Theme {
         match t {
             ThemeType::Ascii => Self::ascii(),
             ThemeType::Unicode => Self::unicode(),
+            ThemeType::Rounded => Self::rounded(),
             ThemeType::Nerd => Self::nerd(),
         }
     }
@@ -56,6 +60,7 @@ impl Theme {
             icon_file: "",
             diff_bar_plus: '+',
             diff_bar_minus: '-',
+            path_divider: "/",
             is_nerd: false,
             simple_icons: false,
         }
@@ -67,10 +72,27 @@ impl Theme {
             tree_branch: '├',
             tree_end: '└',
             tree_dash: '─',
-            icon_dir: "📁 ", // Unicode folder? Or just empty? Roadmap says Unicode has smoother lines.
+            icon_dir: "",
             icon_file: "",
             diff_bar_plus: '◼',
             diff_bar_minus: '◼',
+            path_divider: " › ",
+            is_nerd: false,
+            simple_icons: false,
+        }
+    }
+
+    pub fn rounded() -> Self {
+        Theme {
+            tree_vertical: '│',
+            tree_branch: '├',
+            tree_end: '╰',
+            tree_dash: '─',
+            icon_dir: "",
+            icon_file: "",
+            diff_bar_plus: '◼',
+            diff_bar_minus: '◼',
+            path_divider: " › ",
             is_nerd: false,
             simple_icons: false,
         }
@@ -86,6 +108,7 @@ impl Theme {
             icon_file: " ",
             diff_bar_plus: '◼',
             diff_bar_minus: '◼',
+            path_divider: "  ",
             is_nerd: true,
             simple_icons: false,
         }

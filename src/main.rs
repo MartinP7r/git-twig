@@ -78,6 +78,7 @@ fn determine_theme(arg_theme: Option<ThemeType>) -> Theme {
             "unicode" => return Theme::unicode(),
             "nerd" => return Theme::nerd(),
             "ascii" => return Theme::ascii(),
+            "rounded" => return Theme::rounded(),
             _ => {}
         }
     }

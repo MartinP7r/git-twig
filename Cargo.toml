@@ -12,3 +12,12 @@ image = "0.25.9"
 ratatui = "0.26"
 crossterm = "0.27"
 ansi-to-tui = "3.1"
+unicode-width = "0.1"
+
+[workspace.metadata.dist]
+# The preferred name of your installer
+formula = "git-twig"
+# Target the user's homebrew-tap
+tap = "MartinP7r/homebrew-tap"
+# Repository for releases
+repository = "https://github.com/MartinP7r/git-twig"

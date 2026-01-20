@@ -25,20 +25,14 @@ Focus: Transforming the tool from a viewer into an actionable interactive termin
 ## Upcoming: v1.1.0 - Distribution & Presence 🚀
 Focus: Making git-twig easier to install and more visible.
 
-- [ ] **Homebrew Formula**: Official tap for macOS users via `cargo-binstall`.
-- [ ] **GitHub Pages**: Beautiful landing page and documentation.
+- [x] **Homebrew Formula**: Official tap for macOS users via `cargo-dist` (Metadata added to Cargo.toml).
+- [x] **GitHub Pages**: Beautiful landing page and documentation.
 - [x] **Deep Example Structure**: Richer `sample-git` for better demos.
-- [ ] **Horizontal Folder Dividers**: 
-    - Render empty directory chains as a single horizontal line with custom dividers.
-    - Path should appear on one line, with files starting on the immediate next line.
-    - Toggle/Configuration for this "Ultra-Compact" view.
+- [x] **Branch Symbol Options**: Added support for **Rounded** (Unicode) and **Standard** (ASCII) tree connectors.
+- [x] **Horizontal Folder Dividers**: Render empty directory chains as a single horizontal line with custom dividers.
 - [ ] **Configurable Keybindings**: Allow customizing TUI keys via `git config`.
-- [ ] **TUI Help Overlay**: 
-    - Move detailed cheat sheet from the bottom bar into a dedicated pop-up overlay (triggered by `?`).
-    - Keep only the most vital hints (e.g. `[?] Help`) visible in the main view.
-- [ ] **Diff Summary Status Bar**: 
-    - Repurpose the bottom bar into a dynamic status bar.
-    - Show global diff summary: `X files changed, Y insertions(+), Z deletions(-)`.
+- [x] **TUI Help Overlay**: Dedicated pop-up overlay (triggered by `?`) with simplified bottom bar hints.
+- [x] **Diff Summary Status Bar**: Dynamic status bar showing global diff summary: `X files changed, Y insertions(+), Z deletions(-)`.
 - [ ] **Searchbar UX**: Add a blinking or static cursor/caret to the search input to clearly visualize spaces and position.
 
 ---
