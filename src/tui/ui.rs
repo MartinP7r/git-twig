@@ -103,17 +103,28 @@ fn render_help_modal(f: &mut Frame, _app: &App) {
     let area = centered_rect(60, 60, f.size());
     let help_text = vec![
         Line::from(vec![
-            Span::styled("git-twig ", Style::default().add_modifier(Modifier::BOLD).fg(Color::Green)),
+            Span::styled(
+                "git-twig ",
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .fg(Color::Green),
+            ),
             Span::raw(format!("v{}", env!("CARGO_PKG_VERSION"))),
         ]),
         Line::from(""),
-        Line::from(vec![Span::styled("Navigation", Style::default().add_modifier(Modifier::UNDERLINED))]),
+        Line::from(vec![Span::styled(
+            "Navigation",
+            Style::default().add_modifier(Modifier::UNDERLINED),
+        )]),
         Line::from("  j/k, Up/Down : Move cursor"),
         Line::from("  h/l, Left/Right : Fold/Expand directory"),
         Line::from("  H/L : Fold/Expand All"),
         Line::from("  d/u : Jump to next/prev file"),
         Line::from(""),
-        Line::from(vec![Span::styled("Actions", Style::default().add_modifier(Modifier::UNDERLINED))]),
+        Line::from(vec![Span::styled(
+            "Actions",
+            Style::default().add_modifier(Modifier::UNDERLINED),
+        )]),
         Line::from("  Space : Stage/Unstage file or directory"),
         Line::from("  Enter : View inline diff"),
         Line::from("  /     : Search files"),
@@ -122,7 +133,10 @@ fn render_help_modal(f: &mut Frame, _app: &App) {
         Line::from("  t     : Cycle Theme (Ascii/Unicode/Rounded/Nerd)"),
         Line::from("  Tab   : Switch Pane (Split view)"),
         Line::from(""),
-        Line::from(vec![Span::styled("General", Style::default().add_modifier(Modifier::UNDERLINED))]),
+        Line::from(vec![Span::styled(
+            "General",
+            Style::default().add_modifier(Modifier::UNDERLINED),
+        )]),
         Line::from("  ?     : Toggle this help"),
         Line::from("  q, Esc: Quit / Back"),
     ];
@@ -189,9 +203,11 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
         ];
 
         let summary = if let Some((added, deleted)) = app.global_stats {
-            format!(" | {} files changed, {}(+), {}(-) ", 
-                app.staged_nodes.len() + app.unstaged_nodes.len(), 
-                added, deleted
+            format!(
+                " | {} files changed, {}(+), {}(-) ",
+                app.staged_nodes.len() + app.unstaged_nodes.len(),
+                added,
+                deleted
             )
         } else {
             String::new()
@@ -199,11 +215,14 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
 
         let mut lines = vec![Line::from(help_text)];
         if !summary.is_empty() {
-            lines.push(Line::from(Span::styled(summary, Style::default().fg(Color::Gray))));
+            lines.push(Line::from(Span::styled(
+                summary,
+                Style::default().fg(Color::Gray),
+            )));
         }
 
-        let help = Paragraph::new(lines)
-            .block(Block::default().borders(Borders::ALL).title(" Hints "));
+        let help =
+            Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title(" Hints "));
         f.render_widget(help, area);
     }
 }

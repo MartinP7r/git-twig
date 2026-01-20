@@ -332,7 +332,10 @@ mod tests {
 
         let node = build_tree(lines, &stats, false, false, false).unwrap();
         if let NodeType::Directory { children } = node.node_type {
-            let file = children.iter().find(|c| c.name == "main.rs").expect("Should find main.rs");
+            let file = children
+                .iter()
+                .find(|c| c.name == "main.rs")
+                .expect("Should find main.rs");
             assert_eq!(file.get_stats(), Some((10, 5)));
         } else {
             panic!("Root should be a directory");

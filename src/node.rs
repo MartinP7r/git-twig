@@ -161,7 +161,10 @@ impl Node {
                 if only_child.is_dir() {
                     let (child_collapsed, _) = only_child.get_collapsed_view(theme);
 
-                    let new_name = format!("{}{}{}", self.name, theme.path_divider, child_collapsed.name);
+                    let new_name = format!(
+                        "{}{}{}",
+                        self.name, theme.path_divider, child_collapsed.name
+                    );
 
                     let combined = Node {
                         name: new_name,

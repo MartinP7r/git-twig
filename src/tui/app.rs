@@ -220,7 +220,7 @@ impl App {
         let mut stats_map = std::collections::HashMap::new();
         let _ = git::collect_diff_stats(&mut stats_map, &["diff", "--numstat"]);
         let _ = git::collect_diff_stats(&mut stats_map, &["diff", "--cached", "--numstat"]);
-        
+
         let mut total_added = 0;
         let mut total_deleted = 0;
         for (a, d) in stats_map.values() {
