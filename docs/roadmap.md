@@ -33,6 +33,12 @@ Focus: Making git-twig easier to install and more visible.
     - Path should appear on one line, with files starting on the immediate next line.
     - Toggle/Configuration for this "Ultra-Compact" view.
 - [ ] **Configurable Keybindings**: Allow customizing TUI keys via `git config`.
+- [ ] **TUI Help Overlay**: 
+    - Move detailed cheat sheet from the bottom bar into a dedicated pop-up overlay (triggered by `?`).
+    - Keep only the most vital hints (e.g. `[?] Help`) visible in the main view.
+- [ ] **Diff Summary Status Bar**: 
+    - Repurpose the bottom bar into a dynamic status bar.
+    - Show global diff summary: `X files changed, Y insertions(+), Z deletions(-)`.
 
 ---
 
