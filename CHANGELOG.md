@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-01-20
+## [v1.0.0] - 2026-01-20
 
 ### Added
 - **Interactive Mode (TUI)**: Complete terminal UI for managing git status.
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architectural Refactor**: Modularized codebase for better performance and maintainability.
 - **Git Logic**: Centralized all git command execution.
 
-## [0.1.0] - 2026-01-14
+## [v0.1.0] - 2026-01-14
 
 ### Added
 * Default collapse setting configurable via `git config --global status-tree.collapse <true|false>`
@@ -36,5 +36,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 [Unreleased]: https://github.com/martinp7r/git-twig/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/martinp7r/git-twig/compare/v0.1.0...v1.0.0
-[0.1.0]: https://github.com/martinp7r/git-twig/releases/tag/v0.1.0
+[v1.0.0]: https://github.com/martinp7r/git-twig/compare/v0.1.0...v1.0.0
+[v0.1.0]: https://github.com/martinp7r/git-twig/releases/tag/v0.1.0
