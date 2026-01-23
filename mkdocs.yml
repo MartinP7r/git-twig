@@ -1,0 +1,51 @@
+site_name: Git-Twig
+site_description: High-performance git status visualizer
+site_author: MartinP7r
+repo_url: https://github.com/MartinP7r/git-twig
+repo_name: MartinP7r/git-twig
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      accent: light green
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: green
+      accent: light green
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+
+nav:
+  - Getting Started:
+    - Introduction: index.md
+    - Quickstart: quickstart.md
+  - Core Features:
+    - Navigation: features/navigation.md
+    - Compact View: features/compact-view.md
+    - Visual Mode: features/visual-mode.md
+  - Project:
+    - Roadmap: roadmap.md
