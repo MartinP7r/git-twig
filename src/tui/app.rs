@@ -675,7 +675,9 @@ impl App {
 
     pub fn jump_to_top(&mut self) {
         let state = match self.layout {
-            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => &mut self.unified_state,
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
+                &mut self.unified_state
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => &mut self.staged_state,
                 Focus::Unstaged => &mut self.unstaged_state,
@@ -742,7 +744,9 @@ impl App {
             self.visual_origin = None;
         } else {
             let state = match self.layout {
-                AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => &self.unified_state,
+                AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
+                    &self.unified_state
+                }
                 AppLayout::Split => match self.focus {
                     Focus::Staged => &self.staged_state,
                     Focus::Unstaged => &self.unstaged_state,

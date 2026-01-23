@@ -359,13 +359,21 @@ fn render_list(
 
             let connector = Span::raw(&node.connector);
             let name_style = if node.is_dir {
-                Style::default().add_modifier(Modifier::BOLD).fg(theme.color_dir)
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .fg(theme.color_dir)
             } else {
                 Style::default().fg(theme.color_file)
             };
             let name = Span::styled(&node.name, name_style);
 
-            let mut spans = vec![Span::raw(prefix), status_indicator, Span::raw(" "), connector, name];
+            let mut spans = vec![
+                Span::raw(prefix),
+                status_indicator,
+                Span::raw(" "),
+                connector,
+                name,
+            ];
             let width = node.connector.width() + node.name.width();
             let padding_len = max_name_width.saturating_sub(width);
             let padding = " ".repeat(padding_len);
