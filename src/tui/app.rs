@@ -316,7 +316,9 @@ impl App {
 
     pub fn show_diff(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -369,7 +371,9 @@ impl App {
 
     pub fn next(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -396,7 +400,9 @@ impl App {
 
     pub fn previous(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -423,7 +429,9 @@ impl App {
 
     pub fn next_file(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -456,7 +464,9 @@ impl App {
 
     pub fn previous_file(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -489,7 +499,9 @@ impl App {
 
     pub fn toggle_stage(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -510,7 +522,9 @@ impl App {
 
     pub fn expand_node(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -531,7 +545,9 @@ impl App {
 
     pub fn collapse_node(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -582,7 +598,9 @@ impl App {
 
     pub fn jump_to_bottom(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -596,7 +614,9 @@ impl App {
 
     pub fn yank_path(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -615,7 +635,9 @@ impl App {
 
     pub fn scroll_paging(&mut self, amount: i32) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => {
+                (&self.unified_nodes, &mut self.unified_state)
+            }
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
