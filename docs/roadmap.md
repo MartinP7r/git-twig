@@ -47,6 +47,7 @@ Focus: Speeding up interactions for power users.
     - `zz`: Center the viewport on the current selection.
     - `ctrl+u` / `ctrl+d`: Page up/down.
 - [ ] **Compact Path Rendering**: A new view toggle option (cycle via `v`) that collapses empty directory chains into a single line (e.g., `src/ui/components` → `src・ui・components`).
+- [ ] **Mintlify Documentation**: Migration of documentation to Mintlify for a premium, modern developer experience.
 - [ ] **Yank Path (`y`)**: Copy the relative or absolute path of the selected file to the system clipboard.
 
 ---
