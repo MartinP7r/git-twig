@@ -49,7 +49,7 @@ mod tests {
         let mut history = ActionHistory::default();
         history.push_action(vec!["a".to_string()], StageAction::Stage);
         assert_eq!(history.undo_stack.len(), 1);
-        
+
         // Push clears redo
         history.redo_stack.push(HistoryEntry {
             paths: vec!["b".to_string()],
@@ -64,14 +64,14 @@ mod tests {
         let mut history = ActionHistory::default();
         let paths = vec!["test.rs".to_string()];
         history.push_action(paths.clone(), StageAction::Stage);
-        
+
         // Undo
         let undo_entry = history.undo().unwrap();
         assert_eq!(undo_entry.paths, paths);
         assert_eq!(undo_entry.action, StageAction::Stage);
         assert_eq!(history.undo_stack.len(), 0);
         assert_eq!(history.redo_stack.len(), 1);
-        
+
         // Redo
         let redo_entry = history.redo().unwrap();
         assert_eq!(redo_entry.paths, paths);
