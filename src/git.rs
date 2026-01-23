@@ -146,3 +146,22 @@ pub fn get_config(key: &str) -> Option<String> {
         None
     }
 }
+pub fn get_config_regexp(pattern: &str) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    let output = Command::new("git")
+        .args(["config", "--get-regexp", pattern])
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            let s = String::from_utf8_lossy(&output.stdout);
+            for line in s.lines() {
+                let parts: Vec<&str> = line.splitn(2, ' ').collect();
+                if parts.len() == 2 {
+                    map.insert(parts[0].to_string(), parts[1].to_string());
+                }
+            }
+        }
+    }
+    map
+}

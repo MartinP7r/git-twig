@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::process::Command;
 
+mod config;
 mod git;
 mod icons;
 mod node;

@@ -30,10 +30,10 @@ Focus: Making git-twig easier to install and more visible.
 - [x] **Deep Example Structure**: Richer `sample-git` for better demos.
 - [x] **Branch Symbol Options**: Added support for **Rounded** (Unicode) and **Standard** (ASCII) tree connectors.
 - [x] **Horizontal Folder Dividers**: Render empty directory chains as a single horizontal line with custom dividers.
-- [ ] **Configurable Keybindings**: Allow customizing TUI keys via `git config`.
+- [x] **Configurable Keybindings**: Allow customizing TUI keys via `git config`.
 - [x] **TUI Help Overlay**: Dedicated pop-up overlay (triggered by `?`) with simplified bottom bar hints.
 - [x] **Diff Summary Status Bar**: Dynamic status bar showing global diff summary: `X files changed, Y insertions(+), Z deletions(-)`.
-- [ ] **Searchbar UX**: Add a blinking or static cursor/caret to the search input to clearly visualize spaces and position.
+- [x] **Searchbar UX**: Add a blinking or static cursor/caret to the search input to clearly visualize spaces and position.
 
 ---
 

@@ -186,6 +186,13 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
             .style(Style::default().fg(Color::Yellow))
             .block(Block::default().borders(Borders::ALL).title(" Search "));
         f.render_widget(p, area);
+
+        if app.is_typing_search {
+            f.set_cursor(
+                area.x + (prefix.width() + app.search_query.width()) as u16 + 1,
+                area.y + 1,
+            );
+        }
     } else {
         let help_text = vec![
             Span::raw(" [j/k]"),

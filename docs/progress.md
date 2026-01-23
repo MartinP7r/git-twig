@@ -71,7 +71,26 @@
   - Updated `walkthrough.md` with new feature indicators.
   - Updated `docs/roadmap.md` to mark features as complete.
 
+
+## 2026-01-23: Roadmap Completion (v1.1.0 Polish)
+
+### Features Implemented
+
+#### 1. Searchbar UX (Cursor)
+- **Goal**: Clearly visualize the insertion point in the search bar.
+- **Changes**:
+  - Added `f.set_cursor` in `src/tui/ui.rs` to show the terminal cursor while typing.
+  - Calculated cursor position using `unicode-width` for accurate placement.
+
+#### 2. Configurable Keybindings
+- **Goal**: Allow power users to customize their workflow.
+- **Changes**:
+  - Implemented `KeyConfig` and `Action` system in `src/config.rs`.
+  - Added `git::get_config_regexp` to load custom mappings from `git config`.
+  - Refactored `src/tui/event.rs` to use action-based dispatching instead of hardcoded keys.
+  - Supports remapping keys via `git config twig.key.<action> <key>`.
+
 ### Current Status
-- Branch: `feat/rich-icons`
-- CI/CD: Tests passing locally.
-- Version: Ready for further feature development or release preparation.
+- Branch: `feat/v1.1-polish`
+- CI/CD: All tests passing.
+- Version: v1.1.0 milestone features fully implemented.

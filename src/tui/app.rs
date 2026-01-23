@@ -3,6 +3,7 @@ use ratatui::widgets::ListState;
 use std::collections::HashSet;
 use unicode_width::UnicodeWidthStr;
 
+use crate::config::KeyConfig;
 use crate::git;
 use crate::node::FlatNode;
 use crate::theme::{Theme, ThemeType};
@@ -91,6 +92,7 @@ pub struct App {
     pub max_name_width: usize,
     pub show_help: bool,
     pub global_stats: Option<(usize, usize)>,
+    pub key_config: KeyConfig,
 }
 
 impl App {
@@ -118,6 +120,7 @@ impl App {
             max_name_width: 0,
             show_help: false,
             global_stats: None,
+            key_config: KeyConfig::load(),
         };
         app.refresh()?;
         Ok(app)
