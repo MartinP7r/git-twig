@@ -29,6 +29,7 @@ pub enum Action {
     PageDown,
     YankPath,
     VisualMode,
+    ToggleTree,
 }
 
 #[derive(Clone)]
@@ -65,6 +66,9 @@ impl Default for KeyConfig {
         mappings.insert(KeyCode::Char('G'), Action::JumpToBottom);
         mappings.insert(KeyCode::Char('y'), Action::YankPath);
         mappings.insert(KeyCode::Char('V'), Action::VisualMode);
+        // Alt+V for Easter Egg (Option+V on Mac)
+        // We'll handle modifiers specifically in event loop if needed, 
+        // but for config we can store it or handle it in event.rs
         KeyConfig { mappings }
     }
 }

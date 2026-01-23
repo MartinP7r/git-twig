@@ -60,6 +60,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 Focus::Unstaged,
                 Focus::Unstaged,
                 visual_range,
+                app.layout == AppLayout::EasterEgg,
             );
 
             render_bottom_bar(f, app, chunks[1]);
@@ -91,6 +92,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 Focus::Staged,
                 app.focus,
                 staged_visual_range,
+                false,
             );
 
             let filtered_unstaged = App::filter_nodes(&app.unstaged_nodes, &app.search_query);
@@ -110,9 +112,35 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 Focus::Unstaged,
                 app.focus,
                 unstaged_visual_range,
+                false,
             );
 
             render_bottom_bar(f, app, chunks[2]);
+        }
+        AppLayout::EasterEgg => {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(0), Constraint::Length(3)])
+                .split(f.size());
+
+            let filtered = App::filter_nodes(&app.unified_nodes, &app.search_query);
+            let visual_range = app.get_visual_range();
+
+            render_list(
+                f,
+                &app.theme,
+                app.max_name_width,
+                &filtered,
+                &mut app.unified_state,
+                chunks[0],
+                " 🎄 actual tree view 🎄 ",
+                Focus::Unstaged,
+                Focus::Unstaged,
+                visual_range,
+                true,
+            );
+
+            render_bottom_bar(f, app, chunks[1]);
         }
     }
 
@@ -291,6 +319,7 @@ fn render_list(
     target_focus: Focus,
     current_focus: Focus,
     visual_range: Option<(usize, usize)>,
+    is_easter_egg: bool,
 ) {
     let items: Vec<ListItem> = nodes
         .iter()
@@ -300,6 +329,22 @@ fn render_list(
             if let Some((start, end)) = visual_range {
                 if i >= start && i <= end {
                     item_style = item_style.bg(Color::Rgb(60, 60, 60));
+                }
+            }
+
+            let mut prefix = String::new();
+            if is_easter_egg {
+                if node.depth == 0 {
+                    // Center the root
+                    prefix = " ".repeat(area.width as usize / 2);
+                } else {
+                    // Alternate sides based on index or name hash
+                    let side = (i % 2) == 0;
+                    if side {
+                        prefix = " ".repeat(4);
+                    } else {
+                        prefix = " ".repeat(area.width as usize / 2 + 4);
+                    }
                 }
             }
             let status_indicator = if node.status == '+' {
@@ -314,13 +359,13 @@ fn render_list(
 
             let connector = Span::raw(&node.connector);
             let name_style = if node.is_dir {
-                Style::default().add_modifier(Modifier::BOLD)
+                Style::default().add_modifier(Modifier::BOLD).fg(theme.color_dir)
             } else {
-                Style::default()
+                Style::default().fg(theme.color_file)
             };
             let name = Span::styled(&node.name, name_style);
 
-            let mut spans = vec![status_indicator, Span::raw(" "), connector, name];
+            let mut spans = vec![Span::raw(prefix), status_indicator, Span::raw(" "), connector, name];
             let width = node.connector.width() + node.name.width();
             let padding_len = max_name_width.saturating_sub(width);
             let padding = " ".repeat(padding_len);

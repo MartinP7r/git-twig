@@ -197,6 +197,7 @@ impl Node {
             raw_status: self.get_raw_status(),
             connector: String::new(),
             stats: self.get_stats(),
+            depth: 0,
         });
 
         if let NodeType::Directory { children } = &self.node_type {
@@ -208,6 +209,7 @@ impl Node {
                 &mut flattened,
                 theme,
                 collapsed_paths,
+                1,
             );
         }
         flattened
@@ -223,6 +225,7 @@ impl Node {
         out: &mut Vec<FlatNode>,
         theme: &Theme,
         collapsed_paths: &std::collections::HashSet<String>,
+        depth: usize,
     ) {
         let count = children.len();
         for (i, child) in children.iter().enumerate() {
@@ -256,6 +259,7 @@ impl Node {
                 raw_status: display_node.get_raw_status(),
                 connector: full_connector,
                 stats: display_node.get_stats(),
+                depth,
             });
 
             if let Some(grand_children) = children_to_render {
@@ -279,6 +283,7 @@ impl Node {
                         out,
                         theme,
                         collapsed_paths,
+                        depth + 1,
                     );
                 }
             }
@@ -526,4 +531,5 @@ pub struct FlatNode {
     pub raw_status: String,
     pub connector: String,
     pub stats: Option<(usize, usize)>,
+    pub depth: usize,
 }

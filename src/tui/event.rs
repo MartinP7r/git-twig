@@ -61,6 +61,13 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                         }
                     }
 
+                    // Handle Alt modifiers (Option on Mac)
+                    if key.modifiers.contains(event::KeyModifiers::ALT) {
+                        if let KeyCode::Char('v') = key.code {
+                            action = Some(Action::ToggleTree);
+                        }
+                    }
+
                     match app.view_mode {
                         ViewMode::Tree => {
                             if let Some(action) = action {
@@ -135,6 +142,14 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                     Action::PageDown => app.scroll_paging(15),
                                     Action::YankPath => {
                                         let _ = app.yank_path();
+                                    }
+                                    Action::ToggleTree => {
+                                        if app.layout == AppLayout::EasterEgg {
+                                            app.layout = AppLayout::Unified;
+                                        } else {
+                                            app.layout = AppLayout::EasterEgg;
+                                        }
+                                        let _ = app.refresh();
                                     }
                                 }
                             }

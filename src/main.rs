@@ -70,21 +70,22 @@ fn determine_collapse(arg_collapse: bool) -> bool {
 }
 
 fn determine_theme(arg_theme: Option<ThemeType>) -> Theme {
-    if let Some(t) = arg_theme {
-        return Theme::new(t);
-    }
-    // Check config
-    if let Some(val) = git::get_config("twig.theme") {
+    let mut theme = if let Some(t) = arg_theme {
+        Theme::new(t)
+    } else if let Some(val) = git::get_config("twig.theme") {
         match val.as_str() {
-            "unicode" => return Theme::unicode(),
-            "nerd" => return Theme::nerd(),
-            "ascii" => return Theme::ascii(),
-            "rounded" => return Theme::rounded(),
-            _ => {}
+            "unicode" => Theme::unicode(),
+            "nerd" => Theme::nerd(),
+            "ascii" => Theme::ascii(),
+            "rounded" => Theme::rounded(),
+            _ => Theme::unicode(),
         }
-    }
-    // Default
-    Theme::unicode()
+    } else {
+        Theme::unicode()
+    };
+
+    theme.load_overrides();
+    theme
 }
 
 fn main() -> Result<()> {

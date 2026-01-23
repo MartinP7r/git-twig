@@ -58,8 +58,9 @@ Focus: Speeding up interactions for power users.
 ---
 
 ## Future Ideas / Backlog 📒
-- [ ] **Custom Themes**: Allow user-defined colors/icons via `git config`.
+- [x] **Custom Themes**: Allow user-defined colors/icons via `git config`. Default folders to orange.
 - [ ] **Machine Readable Output**: JSON/YAML export for scripting integration.
+- [x] **Easter Egg**: `Alt-V` switches to a view where folders alternate sides, making it look like a physical tree.
 - [ ] **Action History**: Undo/Redo support for staging operations.
 - [x] **Scroll Resistance**: Add a small resistance/haptic-like pause when scrolling to the top edge before looping or stopping.
 - [ ] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.

@@ -38,6 +38,7 @@ pub enum AppLayout {
     Unified,
     Split,
     Compact,
+    EasterEgg,
 }
 
 impl AppLayout {
@@ -46,6 +47,7 @@ impl AppLayout {
             AppLayout::Unified => AppLayout::Split,
             AppLayout::Split => AppLayout::Compact,
             AppLayout::Compact => AppLayout::Unified,
+            AppLayout::EasterEgg => AppLayout::Unified,
         }
     }
 }
@@ -154,7 +156,7 @@ impl App {
 
     pub fn refresh(&mut self) -> Result<()> {
         match self.layout {
-            AppLayout::Unified => {
+            AppLayout::Unified | AppLayout::EasterEgg => {
                 let (staged, modified) = match self.filter_mode {
                     FilterMode::All => (false, false),
                     FilterMode::Modified => (false, true),
@@ -326,7 +328,7 @@ impl App {
 
     pub fn show_diff(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -381,7 +383,7 @@ impl App {
 
     pub fn next(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -418,7 +420,7 @@ impl App {
 
     pub fn previous(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -455,7 +457,7 @@ impl App {
 
     pub fn next_file(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -501,7 +503,7 @@ impl App {
 
     pub fn previous_file(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -547,7 +549,7 @@ impl App {
 
     pub fn toggle_stage(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -582,7 +584,7 @@ impl App {
 
     pub fn expand_node(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -618,7 +620,7 @@ impl App {
 
     pub fn collapse_node(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -673,7 +675,7 @@ impl App {
 
     pub fn jump_to_top(&mut self) {
         let state = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => &mut self.unified_state,
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => &mut self.unified_state,
             AppLayout::Split => match self.focus {
                 Focus::Staged => &mut self.staged_state,
                 Focus::Unstaged => &mut self.unstaged_state,
@@ -686,7 +688,7 @@ impl App {
 
     pub fn jump_to_bottom(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -704,7 +706,7 @@ impl App {
 
     pub fn yank_path(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -740,7 +742,7 @@ impl App {
             self.visual_origin = None;
         } else {
             let state = match self.layout {
-                AppLayout::Unified | AppLayout::Compact => &self.unified_state,
+                AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => &self.unified_state,
                 AppLayout::Split => match self.focus {
                     Focus::Staged => &self.staged_state,
                     Focus::Unstaged => &self.unstaged_state,
@@ -760,7 +762,7 @@ impl App {
 
         let origin = self.visual_origin?;
         let state = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => &self.unified_state,
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => &self.unified_state,
             AppLayout::Split => match self.focus {
                 Focus::Staged => &self.staged_state,
                 Focus::Unstaged => &self.unstaged_state,
@@ -777,7 +779,7 @@ impl App {
 
     pub fn scroll_paging(&mut self, amount: i32) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified | AppLayout::Compact => {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
                 (&self.unified_nodes, &mut self.unified_state)
             }
             AppLayout::Split => match self.focus {
@@ -853,6 +855,7 @@ mod tests {
                 raw_status: "??".into(),
                 connector: "".into(),
                 stats: None,
+                depth: 0,
             },
             FlatNode {
                 name: "bar.rs".into(),
@@ -863,6 +866,7 @@ mod tests {
                 raw_status: "??".into(),
                 connector: "".into(),
                 stats: None,
+                depth: 0,
             },
         ];
 
