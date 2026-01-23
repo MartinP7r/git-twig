@@ -80,11 +80,15 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                 app.scroll_help(-1);
                                 continue;
                             }
-                            KeyCode::Char('u') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                            KeyCode::Char('u')
+                                if key.modifiers.contains(event::KeyModifiers::CONTROL) =>
+                            {
                                 app.scroll_help(-10);
                                 continue;
                             }
-                            KeyCode::Char('d') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                            KeyCode::Char('d')
+                                if key.modifiers.contains(event::KeyModifiers::CONTROL) =>
+                            {
                                 app.scroll_help(10);
                                 continue;
                             }
