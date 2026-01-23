@@ -31,7 +31,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         AppLayout::Unified => {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(0), Constraint::Length(4)])
+                .constraints([Constraint::Min(0), Constraint::Length(3)])
                 .split(f.size());
 
             let title = format!(
@@ -60,7 +60,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 .constraints([
                     Constraint::Percentage(45),
                     Constraint::Percentage(45),
-                    Constraint::Length(4),
+                    Constraint::Length(3),
                 ])
                 .split(f.size());
 
@@ -194,43 +194,66 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
             );
         }
     } else {
-        let help_text = vec![
-            Span::raw(" [j/k]"),
-            Span::styled(" Nav", Style::default().fg(Color::Gray)),
-            Span::raw(" [Space]"),
-            Span::styled(" Stage", Style::default().fg(Color::Magenta)),
-            Span::raw(" [v]"),
-            Span::styled(" View", Style::default().fg(Color::Green)),
-            Span::raw(" [/]"),
-            Span::styled(" Search", Style::default().fg(Color::Cyan)),
-            Span::raw(" [?]"),
-            Span::styled(" Help", Style::default().fg(Color::Yellow)),
-            Span::raw(" [q]"),
-            Span::styled(" Quit", Style::default().fg(Color::Gray)),
-        ];
+        let (added, deleted) = app.global_stats.unwrap_or((0, 0));
+        let total = added + deleted;
+        let mut stats_spans = vec![Span::raw(format!(
+            " {} files changed ",
+            app.staged_nodes.len() + app.unstaged_nodes.len()
+        ))];
 
-        let summary = if let Some((added, deleted)) = app.global_stats {
-            format!(
-                " | {} files changed, {}(+), {}(-) ",
-                app.staged_nodes.len() + app.unstaged_nodes.len(),
-                added,
-                deleted
-            )
-        } else {
-            String::new()
-        };
+        if total > 0 {
+            stats_spans.push(Span::raw("| "));
+            stats_spans.push(Span::styled(
+                format!("{} ", added),
+                Style::default().fg(Color::Green),
+            ));
 
-        let mut lines = vec![Line::from(help_text)];
-        if !summary.is_empty() {
-            lines.push(Line::from(Span::styled(
-                summary,
-                Style::default().fg(Color::Gray),
-            )));
+            let max_bar_width = 15;
+            let (plus_chars, minus_chars) = if total <= max_bar_width {
+                (added, deleted)
+            } else {
+                let ratio = added as f64 / total as f64;
+                let p = (ratio * max_bar_width as f64).round() as usize;
+                let m = max_bar_width - p;
+                (p, m)
+            };
+
+            stats_spans.push(Span::styled(
+                app.theme.diff_bar_plus.to_string().repeat(plus_chars),
+                Style::default().fg(Color::Green),
+            ));
+            stats_spans.push(Span::styled(
+                app.theme.diff_bar_minus.to_string().repeat(minus_chars),
+                Style::default().fg(Color::Red),
+            ));
+            stats_spans.push(Span::styled(
+                format!(" {}", deleted),
+                Style::default().fg(Color::Red),
+            ));
         }
 
-        let help =
-            Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title(" Hints "));
-        f.render_widget(help, area);
+        let left_content = Line::from(stats_spans);
+        let right_content = Line::from(vec![
+            Span::raw("[?] "),
+            Span::styled("help", Style::default().fg(Color::Yellow)),
+        ]);
+
+        let block = Block::default()
+            .borders(Borders::TOP)
+            .border_style(Style::default().fg(Color::Rgb(60, 60, 60)));
+        let inner_area = block.inner(area);
+        f.render_widget(block, area);
+
+        let layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Min(0), Constraint::Length(10)])
+            .split(inner_area);
+
+        f.render_widget(Paragraph::new(left_content), layout[0]);
+        f.render_widget(
+            Paragraph::new(right_content).alignment(ratatui::layout::Alignment::Right),
+            layout[1],
+        );
     }
 }
 
