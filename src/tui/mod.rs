@@ -8,6 +8,7 @@ use std::io;
 
 mod app;
 mod event;
+mod history;
 mod ui;
 
 use app::App;

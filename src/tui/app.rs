@@ -7,6 +7,7 @@ use crate::config::KeyConfig;
 use crate::git;
 use crate::node::FlatNode;
 use crate::theme::{Theme, ThemeType};
+use crate::tui::history::{ActionHistory, StageAction};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FilterMode {
@@ -102,6 +103,7 @@ pub struct App {
     pub visual_origin: Option<usize>,
     pub hit_top_edge: bool,
     pub hit_bottom_edge: bool,
+    pub history: ActionHistory,
 }
 
 impl App {
@@ -135,6 +137,7 @@ impl App {
             visual_origin: None,
             hit_top_edge: false,
             hit_bottom_edge: false,
+            history: ActionHistory::default(),
         };
         app.refresh()?;
         Ok(app)
@@ -562,12 +565,29 @@ impl App {
 
         if self.is_visual_mode {
             if let Some((start, end)) = self.get_visual_range() {
+                let mut paths = Vec::new();
+                let mut bulk_action = None;
+
                 for i in start..=end {
                     if let Some(node) = filtered.get(i) {
-                        let is_staged = node.raw_status.contains('+');
-                        git::toggle_stage(&node.full_path, is_staged)?;
+                        paths.push(node.full_path.clone());
+                        if bulk_action.is_none() {
+                            bulk_action = Some(if node.raw_status.contains('+') {
+                                StageAction::Unstage
+                            } else {
+                                StageAction::Stage
+                            });
+                        }
                     }
                 }
+
+                if let Some(action) = bulk_action {
+                    for path in &paths {
+                        git::toggle_stage(path, action == StageAction::Unstage)?;
+                    }
+                    self.history.push_action(paths, action);
+                }
+
                 self.is_visual_mode = false;
                 self.visual_origin = None;
                 self.refresh()?;
@@ -575,9 +595,39 @@ impl App {
         } else if let Some(i) = state.selected() {
             if let Some(node) = filtered.get(i) {
                 let is_staged = node.raw_status.contains('+');
+                let action = if is_staged {
+                    StageAction::Unstage
+                } else {
+                    StageAction::Stage
+                };
+
                 git::toggle_stage(&node.full_path, is_staged)?;
+                self.history
+                    .push_action(vec![node.full_path.clone()], action);
                 self.refresh()?;
             }
+        }
+        Ok(())
+    }
+
+    pub fn undo_staging(&mut self) -> Result<()> {
+        if let Some(entry) = self.history.undo() {
+            for path in entry.paths {
+                let to_unstage = entry.action == StageAction::Stage;
+                git::toggle_stage(&path, to_unstage)?;
+            }
+            self.refresh()?;
+        }
+        Ok(())
+    }
+
+    pub fn redo_staging(&mut self) -> Result<()> {
+        if let Some(entry) = self.history.redo() {
+            for path in entry.paths {
+                let to_unstage = entry.action == StageAction::Unstage;
+                git::toggle_stage(&path, to_unstage)?;
+            }
+            self.refresh()?;
         }
         Ok(())
     }

@@ -30,6 +30,8 @@ pub enum Action {
     YankPath,
     VisualMode,
     ToggleTree,
+    Undo,
+    Redo,
 }
 
 #[derive(Clone)]
@@ -66,6 +68,7 @@ impl Default for KeyConfig {
         mappings.insert(KeyCode::Char('G'), Action::JumpToBottom);
         mappings.insert(KeyCode::Char('y'), Action::YankPath);
         mappings.insert(KeyCode::Char('V'), Action::VisualMode);
+        mappings.insert(KeyCode::Char('u'), Action::Undo);
         // Alt+V for Easter Egg (Option+V on Mac)
         // We'll handle modifiers specifically in event loop if needed,
         // but for config we can store it or handle it in event.rs
@@ -135,6 +138,8 @@ fn parse_action(s: &str) -> Option<Action> {
         "page_down" => Some(Action::PageDown),
         "yank" | "yank_path" => Some(Action::YankPath),
         "visual" | "visual_mode" => Some(Action::VisualMode),
+        "undo" => Some(Action::Undo),
+        "redo" => Some(Action::Redo),
         _ => None,
     }
 }

@@ -58,6 +58,8 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                             action = Some(Action::PageUp);
                         } else if let KeyCode::Char('d') = key.code {
                             action = Some(Action::PageDown);
+                        } else if let KeyCode::Char('r') = key.code {
+                            action = Some(Action::Redo);
                         }
                     }
 
@@ -150,6 +152,12 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                             app.layout = AppLayout::EasterEgg;
                                         }
                                         let _ = app.refresh();
+                                    }
+                                    Action::Undo => {
+                                        let _ = app.undo_staging();
+                                    }
+                                    Action::Redo => {
+                                        let _ = app.redo_staging();
                                     }
                                 }
                             }
