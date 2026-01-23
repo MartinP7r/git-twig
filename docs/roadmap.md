@@ -1,3 +1,8 @@
+---
+title: "Roadmap"
+description: "The path ahead for Git-Twig development."
+---
+
 # Product Roadmap
 
 ## Shipped Releases 🚢
@@ -41,14 +46,14 @@ Focus: Making git-twig easier to install and more visible.
 ## Upcoming: v1.2.0 - The "Efficiency" Milestone ⚡️
 Focus: Speeding up interactions for power users.
 
-- [ ] **Visual Line Mode (`Shift+V`)**: Select multiple lines to stage/unstage or fold/unfold in bulk.
-- [ ] **Advanced Vim Navigation**:
+- [x] **Visual Line Mode (`Shift+V`)**: Select multiple lines to stage/unstage or fold/unfold in bulk.
+- [x] **Advanced Vim Navigation**:
     - `gg` / `G`: Jump to start/end of the list.
     - `zz`: Center the viewport on the current selection.
     - `ctrl+u` / `ctrl+d`: Page up/down.
-- [ ] **Compact Path Rendering**: A new view toggle option (cycle via `v`) that collapses empty directory chains into a single line (e.g., `src/ui/components` → `src・ui・components`).
+- [x] **Compact Path Rendering**: A new view toggle option (cycle via `v`) that collapses empty directory chains into a single line (e.g., `src/ui/components` → `src・ui・components`).
 - [ ] **Mintlify Documentation**: Migration of documentation to Mintlify for a premium, modern developer experience.
-- [ ] **Yank Path (`y`)**: Copy the relative or absolute path of the selected file to the system clipboard.
+- [x] **Yank Path (`y`)**: Copy the relative or absolute path of the selected file to the system clipboard.
 
 ---
 
@@ -56,5 +61,6 @@ Focus: Speeding up interactions for power users.
 - [ ] **Custom Themes**: Allow user-defined colors/icons via `git config`.
 - [ ] **Machine Readable Output**: JSON/YAML export for scripting integration.
 - [ ] **Action History**: Undo/Redo support for staging operations.
+- [ ] **Scroll Resistance**: Add a small resistance/haptic-like pause when scrolling to the top edge before looping or stopping.
 - [ ] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.
 - [ ] **Diff Search**: Search for text *within* the diff content in Diff View.

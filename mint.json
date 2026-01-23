@@ -1,0 +1,37 @@
+{
+    "$schema": "https://mintlify.com/docs.json",
+    "name": "Git-Twig",
+    "logo": {
+        "light": "/logo/light.svg",
+        "dark": "/logo/dark.svg"
+    },
+    "favicon": "/favicon.png",
+    "colors": {
+        "primary": "#16a34a",
+        "light": "#4ade80",
+        "dark": "#166534"
+    },
+    "navigation": [
+        {
+            "group": "Getting Started",
+            "pages": [
+                "docs/introduction",
+                "docs/quickstart"
+            ]
+        },
+        {
+            "group": "Core Features",
+            "pages": [
+                "docs/features/navigation",
+                "docs/features/compact-view",
+                "docs/features/visual-mode"
+            ]
+        },
+        {
+            "group": "Project",
+            "pages": [
+                "docs/roadmap"
+            ]
+        }
+    ]
+}
