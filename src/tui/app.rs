@@ -98,6 +98,8 @@ pub struct App {
     pub pending_key: Option<char>,
     pub is_visual_mode: bool,
     pub visual_origin: Option<usize>,
+    pub hit_top_edge: bool,
+    pub hit_bottom_edge: bool,
 }
 
 impl App {
@@ -129,6 +131,8 @@ impl App {
             pending_key: None,
             is_visual_mode: false,
             visual_origin: None,
+            hit_top_edge: false,
+            hit_bottom_edge: false,
         };
         app.refresh()?;
         Ok(app)
@@ -394,8 +398,16 @@ impl App {
         let i = match state.selected() {
             Some(i) => {
                 if i >= filtered.len() - 1 {
-                    0
+                    if self.hit_bottom_edge {
+                        self.hit_bottom_edge = false;
+                        0
+                    } else {
+                        self.hit_bottom_edge = true;
+                        i
+                    }
                 } else {
+                    self.hit_bottom_edge = false;
+                    self.hit_top_edge = false;
                     i + 1
                 }
             }
@@ -423,8 +435,16 @@ impl App {
         let i = match state.selected() {
             Some(i) => {
                 if i == 0 {
-                    filtered.len() - 1
+                    if self.hit_top_edge {
+                        self.hit_top_edge = false;
+                        filtered.len() - 1
+                    } else {
+                        self.hit_top_edge = true;
+                        0
+                    }
                 } else {
+                    self.hit_top_edge = false;
+                    self.hit_bottom_edge = false;
                     i - 1
                 }
             }
@@ -452,15 +472,26 @@ impl App {
         let start_idx = state.selected().unwrap_or(0);
         let mut idx = start_idx;
 
+        // Reset hit_top_edge when moving down
+        self.hit_top_edge = false;
+
         for _ in 0..filtered.len() {
             if idx >= filtered.len() - 1 {
-                idx = 0;
+                if self.hit_bottom_edge {
+                    self.hit_bottom_edge = false;
+                    idx = 0;
+                } else {
+                    self.hit_bottom_edge = true;
+                    state.select(Some(idx));
+                    return;
+                }
             } else {
                 idx += 1;
             }
 
             if let Some(node) = filtered.get(idx) {
                 if !node.is_dir {
+                    self.hit_bottom_edge = false;
                     state.select(Some(idx));
                     return;
                 }
@@ -487,15 +518,26 @@ impl App {
         let start_idx = state.selected().unwrap_or(0);
         let mut idx = start_idx;
 
+        // Reset hit_bottom_edge when moving up
+        self.hit_bottom_edge = false;
+
         for _ in 0..filtered.len() {
             if idx == 0 {
-                idx = filtered.len() - 1;
+                if self.hit_top_edge {
+                    self.hit_top_edge = false;
+                    idx = filtered.len() - 1;
+                } else {
+                    self.hit_top_edge = true;
+                    state.select(Some(0));
+                    return;
+                }
             } else {
                 idx -= 1;
             }
 
             if let Some(node) = filtered.get(idx) {
                 if !node.is_dir {
+                    self.hit_top_edge = false;
                     state.select(Some(idx));
                     return;
                 }
@@ -638,6 +680,8 @@ impl App {
             },
         };
         state.select(Some(0));
+        self.hit_top_edge = false;
+        self.hit_bottom_edge = false;
     }
 
     pub fn jump_to_bottom(&mut self) {
@@ -654,6 +698,8 @@ impl App {
         if !filtered.is_empty() {
             state.select(Some(filtered.len() - 1));
         }
+        self.hit_top_edge = false;
+        self.hit_bottom_edge = false;
     }
 
     pub fn yank_path(&mut self) -> Result<()> {

@@ -52,7 +52,7 @@ Focus: Speeding up interactions for power users.
     - `zz`: Center the viewport on the current selection.
     - `ctrl+u` / `ctrl+d`: Page up/down.
 - [x] **Compact Path Rendering**: A new view toggle option (cycle via `v`) that collapses empty directory chains into a single line (e.g., `src/ui/components` → `src・ui・components`).
-- [ ] **Mintlify Documentation**: Migration of documentation to Mintlify for a premium, modern developer experience.
+- [x] **Mintlify Documentation**: Migration of documentation to Mintlify for a premium, modern developer experience.
 - [x] **Yank Path (`y`)**: Copy the relative or absolute path of the selected file to the system clipboard.
 
 ---
@@ -61,6 +61,6 @@ Focus: Speeding up interactions for power users.
 - [ ] **Custom Themes**: Allow user-defined colors/icons via `git config`.
 - [ ] **Machine Readable Output**: JSON/YAML export for scripting integration.
 - [ ] **Action History**: Undo/Redo support for staging operations.
-- [ ] **Scroll Resistance**: Add a small resistance/haptic-like pause when scrolling to the top edge before looping or stopping.
+- [x] **Scroll Resistance**: Add a small resistance/haptic-like pause when scrolling to the top edge before looping or stopping.
 - [ ] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.
 - [ ] **Diff Search**: Search for text *within* the diff content in Diff View.
