@@ -33,7 +33,34 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                         _ => {}
                     }
                 } else {
-                    let action = app.key_config.mappings.get(&key.code);
+                    let mut action = app.key_config.mappings.get(&key.code).cloned();
+
+                    // Handle pending keys (gg, zz)
+                    if let KeyCode::Char(c) = key.code {
+                        if let Some(pending) = app.pending_key {
+                            match (pending, c) {
+                                ('g', 'g') => action = Some(Action::JumpToTop),
+                                ('z', 'z') => action = Some(Action::CenterView),
+                                _ => {}
+                            }
+                            app.pending_key = None;
+                        } else if c == 'g' || c == 'z' {
+                            app.pending_key = Some(c);
+                            continue;
+                        }
+                    } else {
+                        app.pending_key = None;
+                    }
+
+                    // Handle Ctrl modifiers
+                    if key.modifiers.contains(event::KeyModifiers::CONTROL) {
+                        if let KeyCode::Char('u') = key.code {
+                            action = Some(Action::PageUp);
+                        } else if let KeyCode::Char('d') = key.code {
+                            action = Some(Action::PageDown);
+                        }
+                    }
+
                     match app.view_mode {
                         ViewMode::Tree => {
                             if let Some(action) = action {
@@ -91,6 +118,18 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                             app.reset_selection();
                                         }
                                     }
+                                    Action::JumpToTop => app.jump_to_top(),
+                                    Action::JumpToBottom => app.jump_to_bottom(),
+                                    Action::CenterView => {
+                                        // CenterView is handled in UI by ensuring ListState offset
+                                        // But for now, we don't have a direct way to force offset in ratatui List
+                                        // We might need to implement a custom scroll logic if we want true 'zz'
+                                    }
+                                    Action::PageUp => app.scroll_paging(-15),
+                                    Action::PageDown => app.scroll_paging(15),
+                                    Action::YankPath => {
+                                        let _ = app.yank_path();
+                                    }
                                 }
                             }
                         }
@@ -100,6 +139,9 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                     Action::Quit | Action::Back | Action::Diff => app.close_diff(),
                                     Action::MoveDown => app.scroll_diff(1),
                                     Action::MoveUp => app.scroll_diff(-1),
+                                    Action::PageUp => app.scroll_diff(-15),
+                                    Action::PageDown => app.scroll_diff(15),
+                                    Action::JumpToTop => app.scroll_diff(-1000), // Jump to top of diff
                                     _ => {}
                                 }
                             }

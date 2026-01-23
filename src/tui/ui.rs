@@ -28,16 +28,23 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     }
 
     match app.layout {
-        AppLayout::Unified => {
+        AppLayout::Unified | AppLayout::Compact => {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Min(0), Constraint::Length(3)])
                 .split(f.size());
 
-            let title = format!(
-                " git-twig interactive | Filter: {} ",
-                app.filter_mode.as_str()
-            );
+            let title = if app.layout == AppLayout::Compact {
+                format!(
+                    " git-twig interactive | Filter: {} (Compact) ",
+                    app.filter_mode.as_str()
+                )
+            } else {
+                format!(
+                    " git-twig interactive | Filter: {} ",
+                    app.filter_mode.as_str()
+                )
+            };
             let filtered = App::filter_nodes(&app.unified_nodes, &app.search_query);
 
             render_list(

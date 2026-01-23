@@ -76,7 +76,7 @@ impl Theme {
             icon_file: "",
             diff_bar_plus: '◼',
             diff_bar_minus: '◼',
-            path_divider: " › ",
+            path_divider: "・",
             is_nerd: false,
             simple_icons: false,
         }
@@ -92,7 +92,7 @@ impl Theme {
             icon_file: "",
             diff_bar_plus: '◼',
             diff_bar_minus: '◼',
-            path_divider: " › ",
+            path_divider: "・",
             is_nerd: false,
             simple_icons: false,
         }
@@ -108,7 +108,7 @@ impl Theme {
             icon_file: " ",
             diff_bar_plus: '◼',
             diff_bar_minus: '◼',
-            path_divider: "  ",
+            path_divider: "・",
             is_nerd: true,
             simple_icons: false,
         }

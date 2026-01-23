@@ -22,6 +22,12 @@ pub enum Action {
     Diff,
     Help,
     Back,
+    JumpToTop,
+    JumpToBottom,
+    CenterView,
+    PageUp,
+    PageDown,
+    YankPath,
 }
 
 #[derive(Clone)]
@@ -55,6 +61,8 @@ impl Default for KeyConfig {
         mappings.insert(KeyCode::Enter, Action::Diff);
         mappings.insert(KeyCode::Char('?'), Action::Help);
         mappings.insert(KeyCode::Esc, Action::Back);
+        mappings.insert(KeyCode::Char('G'), Action::JumpToBottom);
+        mappings.insert(KeyCode::Char('y'), Action::YankPath);
         KeyConfig { mappings }
     }
 }
@@ -114,6 +122,12 @@ fn parse_action(s: &str) -> Option<Action> {
         "diff" => Some(Action::Diff),
         "help" => Some(Action::Help),
         "back" => Some(Action::Back),
+        "top" | "jump_to_top" => Some(Action::JumpToTop),
+        "bottom" | "jump_to_bottom" => Some(Action::JumpToBottom),
+        "center" | "center_view" => Some(Action::CenterView),
+        "page_up" => Some(Action::PageUp),
+        "page_down" => Some(Action::PageDown),
+        "yank" | "yank_path" => Some(Action::YankPath),
         _ => None,
     }
 }

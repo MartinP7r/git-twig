@@ -37,13 +37,15 @@ impl FilterMode {
 pub enum AppLayout {
     Unified,
     Split,
+    Compact,
 }
 
 impl AppLayout {
     pub fn next(&self) -> Self {
         match self {
             AppLayout::Unified => AppLayout::Split,
-            AppLayout::Split => AppLayout::Unified,
+            AppLayout::Split => AppLayout::Compact,
+            AppLayout::Compact => AppLayout::Unified,
         }
     }
 }
@@ -93,6 +95,7 @@ pub struct App {
     pub show_help: bool,
     pub global_stats: Option<(usize, usize)>,
     pub key_config: KeyConfig,
+    pub pending_key: Option<char>,
 }
 
 impl App {
@@ -121,6 +124,7 @@ impl App {
             show_help: false,
             global_stats: None,
             key_config: KeyConfig::load(),
+            pending_key: None,
         };
         app.refresh()?;
         Ok(app)
@@ -216,6 +220,34 @@ impl App {
 
                 let staged_active = self.focus == Focus::Staged;
                 Self::adjust_selection(&self.staged_nodes, &mut self.staged_state, staged_active);
+                let unstaged_active = self.focus == Focus::Unstaged;
+                Self::adjust_selection(
+                    &self.unstaged_nodes,
+                    &mut self.unstaged_state,
+                    unstaged_active,
+                );
+            }
+            AppLayout::Compact => {
+                let tree = git::build_tree_from_git(false, false, false)?;
+                if let Some(root) = tree {
+                    self.unified_nodes = root.flatten(
+                        self.indent_size,
+                        true, // Force collapse for compact view
+                        &self.theme,
+                        &self.collapsed_paths,
+                    );
+                } else {
+                    self.unified_nodes = Vec::new();
+                }
+
+                self.max_name_width = self
+                    .unified_nodes
+                    .iter()
+                    .map(|n| n.connector.width() + n.name.width())
+                    .max()
+                    .unwrap_or(0);
+
+                Self::adjust_selection(&self.unified_nodes, &mut self.unified_state, true);
             }
         }
 
@@ -284,7 +316,7 @@ impl App {
 
     pub fn show_diff(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -337,7 +369,7 @@ impl App {
 
     pub fn next(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -364,7 +396,7 @@ impl App {
 
     pub fn previous(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -391,7 +423,7 @@ impl App {
 
     pub fn next_file(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -424,7 +456,7 @@ impl App {
 
     pub fn previous_file(&mut self) {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -457,7 +489,7 @@ impl App {
 
     pub fn toggle_stage(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -478,7 +510,7 @@ impl App {
 
     pub fn expand_node(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -499,7 +531,7 @@ impl App {
 
     pub fn collapse_node(&mut self) -> Result<()> {
         let (nodes, state) = match self.layout {
-            AppLayout::Unified => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
             AppLayout::Split => match self.focus {
                 Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
                 Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
@@ -536,6 +568,77 @@ impl App {
     pub fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
     }
+
+    pub fn jump_to_top(&mut self) {
+        let state = match self.layout {
+            AppLayout::Unified | AppLayout::Compact => &mut self.unified_state,
+            AppLayout::Split => match self.focus {
+                Focus::Staged => &mut self.staged_state,
+                Focus::Unstaged => &mut self.unstaged_state,
+            },
+        };
+        state.select(Some(0));
+    }
+
+    pub fn jump_to_bottom(&mut self) {
+        let (nodes, state) = match self.layout {
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Split => match self.focus {
+                Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+                Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+            },
+        };
+        let filtered = Self::filter_nodes(nodes, &self.search_query);
+        if !filtered.is_empty() {
+            state.select(Some(filtered.len() - 1));
+        }
+    }
+
+    pub fn yank_path(&mut self) -> Result<()> {
+        let (nodes, state) = match self.layout {
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Split => match self.focus {
+                Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+                Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+            },
+        };
+
+        let filtered = Self::filter_nodes(nodes, &self.search_query);
+        if let Some(i) = state.selected() {
+            if let Some(node) = filtered.get(i) {
+                let mut clipboard = arboard::Clipboard::new()?;
+                clipboard.set_text(node.full_path.clone())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn scroll_paging(&mut self, amount: i32) {
+        let (nodes, state) = match self.layout {
+            AppLayout::Unified | AppLayout::Compact => (&self.unified_nodes, &mut self.unified_state),
+            AppLayout::Split => match self.focus {
+                Focus::Staged => (&self.staged_nodes, &mut self.staged_state),
+                Focus::Unstaged => (&self.unstaged_nodes, &mut self.unstaged_state),
+            },
+        };
+
+        let filtered = Self::filter_nodes(nodes, &self.search_query);
+        if filtered.is_empty() {
+            return;
+        }
+
+        let i = match state.selected() {
+            Some(i) => {
+                if amount > 0 {
+                    (i + amount as usize).min(filtered.len() - 1)
+                } else {
+                    i.saturating_sub((-amount) as usize)
+                }
+            }
+            None => 0,
+        };
+        state.select(Some(i));
+    }
 }
 
 #[cfg(test)]
@@ -563,7 +666,8 @@ mod tests {
     fn test_app_layout_transitions() {
         let layout = AppLayout::Unified;
         assert_eq!(layout.next(), AppLayout::Split);
-        assert_eq!(layout.next().next(), AppLayout::Unified);
+        assert_eq!(layout.next().next(), AppLayout::Compact);
+        assert_eq!(layout.next().next().next(), AppLayout::Unified);
     }
 
     #[test]
