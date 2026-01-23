@@ -59,25 +59,37 @@ Run `git-twig -I` to enter the interactive TUI.
 - **View Toggle**: `v` to switch between **Unified** and **Split** layouts.
 - **Theme Cycle**: `t` to quickly switch between visual styles.
 
-## Configuration
+## Configuration ⚙️
 
-You can configure defaults via `git config`:
+You can customize **git-twig** behavior via `git config`.
 
-**Indentation** (Default: 3)
+### CLI Example
+Set a value directly from your terminal:
 ```bash
 git config --global twig.indent 2
 ```
 
-**Collapse Directories** (Default: false)
-```bash
-git config --global twig.collapse true
+### `.gitconfig` Example
+Add a `[twig]` section to your `~/.gitconfig` file to manage all settings in one place:
+
+```gitconfig
+[twig]
+    # Visuals
+    indent = 3             # 2-10 spaces
+    collapse = false       # Collapse single-child directories
+    theme = unicode        # ascii, unicode, nerd, rounded
+
+    # Custom Keybindings
+    # Format: key.<action> = <key>
+    # Keys: a-z, up, down, left, right, space, enter, tab, esc, backspace
+    key.stage = k          # Remap stage/unstage to 'k'
+    key.up = i             # Use 'i' for up
+    key.down = m           # Use 'm' for down
+    key.search = s         # Use 's' for search instead of '/'
 ```
 
-**Theme** (Default: unicode)
-```bash
-# Options: ascii, unicode, nerd
-git config --global twig.theme nerd
-```
+#### Available Actions for Keybindings:
+`quit`, `search`, `down`, `up`, `collapse`, `collapse_all`, `expand`, `expand_all`, `next_file`, `prev_file`, `stage`, `filter`, `layout`, `theme`, `switch_pane`, `diff`, `help`, `back`.
 
 1. **Build**: `cargo build`
 2. **Run**: `cargo run`

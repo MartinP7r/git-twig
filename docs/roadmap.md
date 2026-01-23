@@ -38,8 +38,8 @@ Focus: Making git-twig easier to install and more visible.
 ---
 
 ## Future Ideas / Backlog 📒
-- [ ] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.
 - [ ] **Custom Themes**: Allow user-defined colors/icons via `git config`.
 - [ ] **Machine Readable Output**: JSON/YAML export for scripting integration.
 - [ ] **Multi-Selection**: Selection ranges or marking multiple files for batch actions.
 - [ ] **Action History**: Undo/Redo support for staging operations.
+- [ ] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.
