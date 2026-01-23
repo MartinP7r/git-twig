@@ -96,6 +96,8 @@ pub struct App {
     pub global_stats: Option<(usize, usize)>,
     pub key_config: KeyConfig,
     pub pending_key: Option<char>,
+    pub is_visual_mode: bool,
+    pub visual_origin: Option<usize>,
 }
 
 impl App {
@@ -125,6 +127,8 @@ impl App {
             global_stats: None,
             key_config: KeyConfig::load(),
             pending_key: None,
+            is_visual_mode: false,
+            visual_origin: None,
         };
         app.refresh()?;
         Ok(app)
@@ -278,6 +282,8 @@ impl App {
 
     pub fn toggle_layout(&mut self) -> Result<()> {
         self.layout = self.layout.next();
+        self.is_visual_mode = false;
+        self.visual_origin = None;
         self.refresh()
     }
 
@@ -510,7 +516,19 @@ impl App {
 
         let filtered = Self::filter_nodes(nodes, &self.search_query);
 
-        if let Some(i) = state.selected() {
+        if self.is_visual_mode {
+            if let Some((start, end)) = self.get_visual_range() {
+                for i in start..=end {
+                    if let Some(node) = filtered.get(i) {
+                        let is_staged = node.raw_status.contains('+');
+                        git::toggle_stage(&node.full_path, is_staged)?;
+                    }
+                }
+                self.is_visual_mode = false;
+                self.visual_origin = None;
+                self.refresh()?;
+            }
+        } else if let Some(i) = state.selected() {
             if let Some(node) = filtered.get(i) {
                 let is_staged = node.raw_status.contains('+');
                 git::toggle_stage(&node.full_path, is_staged)?;
@@ -532,7 +550,20 @@ impl App {
         };
         let filtered = Self::filter_nodes(nodes, &self.search_query);
 
-        if let Some(i) = state.selected() {
+        if self.is_visual_mode {
+            if let Some((start, end)) = self.get_visual_range() {
+                for i in start..=end {
+                    if let Some(node) = filtered.get(i) {
+                        if node.is_dir && self.collapsed_paths.contains(&node.full_path) {
+                            self.collapsed_paths.remove(&node.full_path);
+                        }
+                    }
+                }
+                self.is_visual_mode = false;
+                self.visual_origin = None;
+                self.refresh()?;
+            }
+        } else if let Some(i) = state.selected() {
             if let Some(node) = filtered.get(i) {
                 if node.is_dir && self.collapsed_paths.contains(&node.full_path) {
                     self.collapsed_paths.remove(&node.full_path);
@@ -555,7 +586,20 @@ impl App {
         };
         let filtered = Self::filter_nodes(nodes, &self.search_query);
 
-        if let Some(i) = state.selected() {
+        if self.is_visual_mode {
+            if let Some((start, end)) = self.get_visual_range() {
+                for i in start..=end {
+                    if let Some(node) = filtered.get(i) {
+                        if node.is_dir && !self.collapsed_paths.contains(&node.full_path) {
+                            self.collapsed_paths.insert(node.full_path.clone());
+                        }
+                    }
+                }
+                self.is_visual_mode = false;
+                self.visual_origin = None;
+                self.refresh()?;
+            }
+        } else if let Some(i) = state.selected() {
             if let Some(node) = filtered.get(i) {
                 if node.is_dir && !self.collapsed_paths.contains(&node.full_path) {
                     self.collapsed_paths.insert(node.full_path.clone());
@@ -624,13 +668,65 @@ impl App {
         };
 
         let filtered = Self::filter_nodes(nodes, &self.search_query);
-        if let Some(i) = state.selected() {
+        let mut clipboard = arboard::Clipboard::new()?;
+
+        if self.is_visual_mode {
+            if let Some((start, end)) = self.get_visual_range() {
+                let paths: Vec<String> = filtered[start..=end]
+                    .iter()
+                    .map(|n| n.full_path.clone())
+                    .collect();
+                clipboard.set_text(paths.join("\n"))?;
+                self.is_visual_mode = false;
+                self.visual_origin = None;
+            }
+        } else if let Some(i) = state.selected() {
             if let Some(node) = filtered.get(i) {
-                let mut clipboard = arboard::Clipboard::new()?;
                 clipboard.set_text(node.full_path.clone())?;
             }
         }
         Ok(())
+    }
+
+    pub fn toggle_visual_mode(&mut self) {
+        if self.is_visual_mode {
+            self.is_visual_mode = false;
+            self.visual_origin = None;
+        } else {
+            let state = match self.layout {
+                AppLayout::Unified | AppLayout::Compact => &self.unified_state,
+                AppLayout::Split => match self.focus {
+                    Focus::Staged => &self.staged_state,
+                    Focus::Unstaged => &self.unstaged_state,
+                },
+            };
+            if let Some(i) = state.selected() {
+                self.is_visual_mode = true;
+                self.visual_origin = Some(i);
+            }
+        }
+    }
+
+    pub fn get_visual_range(&self) -> Option<(usize, usize)> {
+        if !self.is_visual_mode {
+            return None;
+        }
+
+        let origin = self.visual_origin?;
+        let state = match self.layout {
+            AppLayout::Unified | AppLayout::Compact => &self.unified_state,
+            AppLayout::Split => match self.focus {
+                Focus::Staged => &self.staged_state,
+                Focus::Unstaged => &self.unstaged_state,
+            },
+        };
+        let current = state.selected()?;
+
+        if origin < current {
+            Some((origin, current))
+        } else {
+            Some((current, origin))
+        }
     }
 
     pub fn scroll_paging(&mut self, amount: i32) {

@@ -47,6 +47,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             };
             let filtered = App::filter_nodes(&app.unified_nodes, &app.search_query);
 
+            let visual_range = app.get_visual_range();
+
             render_list(
                 f,
                 &app.theme,
@@ -57,6 +59,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 &title,
                 Focus::Unstaged,
                 Focus::Unstaged,
+                visual_range,
             );
 
             render_bottom_bar(f, app, chunks[1]);
@@ -72,6 +75,11 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 .split(f.size());
 
             let filtered_staged = App::filter_nodes(&app.staged_nodes, &app.search_query);
+            let staged_visual_range = if app.focus == Focus::Staged {
+                app.get_visual_range()
+            } else {
+                None
+            };
             render_list(
                 f,
                 &app.theme,
@@ -82,9 +90,15 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 " Staged Changes ",
                 Focus::Staged,
                 app.focus,
+                staged_visual_range,
             );
 
             let filtered_unstaged = App::filter_nodes(&app.unstaged_nodes, &app.search_query);
+            let unstaged_visual_range = if app.focus == Focus::Unstaged {
+                app.get_visual_range()
+            } else {
+                None
+            };
             render_list(
                 f,
                 &app.theme,
@@ -95,6 +109,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 " Unstaged Changes ",
                 Focus::Unstaged,
                 app.focus,
+                unstaged_visual_range,
             );
 
             render_bottom_bar(f, app, chunks[2]);
@@ -136,9 +151,9 @@ fn render_help_modal(f: &mut Frame, _app: &App) {
         Line::from("  Enter : View inline diff"),
         Line::from("  /     : Search files"),
         Line::from("  f     : Toggle Filter (Unified view)"),
-        Line::from("  v     : Toggle Layout (Unified/Split)"),
-        Line::from("  t     : Cycle Theme (Ascii/Unicode/Rounded/Nerd)"),
-        Line::from("  Tab   : Switch Pane (Split view)"),
+        Line::from("  t      : Cycle Theme (Ascii/Unicode/Rounded/Nerd)"),
+        Line::from("  V      : Visual Selection Mode"),
+        Line::from("  Tab    : Switch Pane (Split view)"),
         Line::from(""),
         Line::from(vec![Span::styled(
             "General",
@@ -275,10 +290,18 @@ fn render_list(
     title: &str,
     target_focus: Focus,
     current_focus: Focus,
+    visual_range: Option<(usize, usize)>,
 ) {
     let items: Vec<ListItem> = nodes
         .iter()
-        .map(|node| {
+        .enumerate()
+        .map(|(i, node)| {
+            let mut item_style = Style::default();
+            if let Some((start, end)) = visual_range {
+                if i >= start && i <= end {
+                    item_style = item_style.bg(Color::Rgb(60, 60, 60));
+                }
+            }
             let status_indicator = if node.status == '+' {
                 Span::styled("[+]", Style::default().fg(Color::Green))
             } else if node.status == '?' {
@@ -329,7 +352,7 @@ fn render_list(
                 }
             }
 
-            ListItem::new(Line::from(spans))
+            ListItem::new(Line::from(spans)).style(item_style)
         })
         .collect();
 

@@ -113,10 +113,16 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                     Action::Back => {
                                         if app.show_help {
                                             app.show_help = false;
+                                        } else if app.is_visual_mode {
+                                            app.is_visual_mode = false;
+                                            app.visual_origin = None;
                                         } else {
                                             app.search_query.clear();
                                             app.reset_selection();
                                         }
+                                    }
+                                    Action::VisualMode => {
+                                        app.toggle_visual_mode();
                                     }
                                     Action::JumpToTop => app.jump_to_top(),
                                     Action::JumpToBottom => app.jump_to_bottom(),

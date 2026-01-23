@@ -28,6 +28,7 @@ pub enum Action {
     PageUp,
     PageDown,
     YankPath,
+    VisualMode,
 }
 
 #[derive(Clone)]
@@ -63,6 +64,7 @@ impl Default for KeyConfig {
         mappings.insert(KeyCode::Esc, Action::Back);
         mappings.insert(KeyCode::Char('G'), Action::JumpToBottom);
         mappings.insert(KeyCode::Char('y'), Action::YankPath);
+        mappings.insert(KeyCode::Char('V'), Action::VisualMode);
         KeyConfig { mappings }
     }
 }
@@ -128,6 +130,7 @@ fn parse_action(s: &str) -> Option<Action> {
         "page_up" => Some(Action::PageUp),
         "page_down" => Some(Action::PageDown),
         "yank" | "yank_path" => Some(Action::YankPath),
+        "visual" | "visual_mode" => Some(Action::VisualMode),
         _ => None,
     }
 }
