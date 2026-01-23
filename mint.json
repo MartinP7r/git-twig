@@ -11,27 +11,29 @@
         "light": "#4ade80",
         "dark": "#166534"
     },
-    "navigation": [
-        {
-            "group": "Getting Started",
-            "pages": [
-                "docs/introduction",
-                "docs/quickstart"
-            ]
-        },
-        {
-            "group": "Core Features",
-            "pages": [
-                "docs/features/navigation",
-                "docs/features/compact-view",
-                "docs/features/visual-mode"
-            ]
-        },
-        {
-            "group": "Project",
-            "pages": [
-                "docs/roadmap"
-            ]
-        }
-    ]
+    "navigation": {
+        "pages": [
+            {
+                "group": "Getting Started",
+                "pages": [
+                    "docs/introduction",
+                    "docs/quickstart"
+                ]
+            },
+            {
+                "group": "Core Features",
+                "pages": [
+                    "docs/features/navigation",
+                    "docs/features/compact-view",
+                    "docs/features/visual-mode"
+                ]
+            },
+            {
+                "group": "Project",
+                "pages": [
+                    "docs/roadmap"
+                ]
+            }
+        ]
+    }
 }

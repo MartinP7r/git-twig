@@ -104,6 +104,7 @@ pub struct App {
     pub hit_top_edge: bool,
     pub hit_bottom_edge: bool,
     pub history: ActionHistory,
+    pub help_scroll: u16,
 }
 
 impl App {
@@ -138,6 +139,7 @@ impl App {
             hit_top_edge: false,
             hit_bottom_edge: false,
             history: ActionHistory::default(),
+            help_scroll: 0,
         };
         app.refresh()?;
         Ok(app)
@@ -721,6 +723,15 @@ impl App {
 
     pub fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
+        self.help_scroll = 0;
+    }
+
+    pub fn scroll_help(&mut self, amount: i16) {
+        if amount > 0 {
+            self.help_scroll = self.help_scroll.saturating_add(amount as u16);
+        } else {
+            self.help_scroll = self.help_scroll.saturating_sub((-amount) as u16);
+        }
     }
 
     pub fn jump_to_top(&mut self) {

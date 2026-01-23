@@ -149,7 +149,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     }
 }
 
-fn render_help_modal(f: &mut Frame, _app: &App) {
+fn render_help_modal(f: &mut Frame, app: &App) {
     let area = centered_rect(60, 60, f.size());
     let help_text = vec![
         Line::from(vec![
@@ -189,6 +189,32 @@ fn render_help_modal(f: &mut Frame, _app: &App) {
         )]),
         Line::from("  ?     : Toggle this help"),
         Line::from("  q, Esc: Quit / Back"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Advanced",
+            Style::default().add_modifier(Modifier::UNDERLINED),
+        )]),
+        Line::from("  gg    : Jump to top"),
+        Line::from("  G     : Jump to bottom"),
+        Line::from("  zz    : Center cursor"),
+        Line::from("  u/Ctrl+r : Undo / Redo stage"),
+        Line::from("  Alt+V : Easter Egg tree view"),
+        Line::from("  y     : Yank path to clipboard"),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Tips",
+            Style::default().add_modifier(Modifier::UNDERLINED),
+        )]),
+        Line::from("  - Use visual mode for bulk staging"),
+        Line::from("  - Compact view helps with deep trees"),
+        Line::from("  - Config is loaded from git config"),
+        Line::from(""),
+        Line::from("  (more content to test scrolling...)"),
+        Line::from("  Line 1"),
+        Line::from("  Line 2"),
+        Line::from("  Line 3"),
+        Line::from("  Line 4"),
+        Line::from("  Line 5"),
     ];
 
     let block = Block::default()
@@ -198,6 +224,7 @@ fn render_help_modal(f: &mut Frame, _app: &App) {
 
     let paragraph = Paragraph::new(help_text)
         .block(block)
+        .scroll((app.help_scroll, 0))
         .wrap(ratatui::widgets::Wrap { trim: true });
 
     f.render_widget(ratatui::widgets::Clear, area); // Clear the background

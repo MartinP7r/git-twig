@@ -70,6 +70,28 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                         }
                     }
 
+                    if app.show_help {
+                        match key.code {
+                            KeyCode::Char('j') | KeyCode::Down => {
+                                app.scroll_help(1);
+                                continue;
+                            }
+                            KeyCode::Char('k') | KeyCode::Up => {
+                                app.scroll_help(-1);
+                                continue;
+                            }
+                            KeyCode::Char('u') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                                app.scroll_help(-10);
+                                continue;
+                            }
+                            KeyCode::Char('d') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                                app.scroll_help(10);
+                                continue;
+                            }
+                            _ => {}
+                        }
+                    }
+
                     match app.view_mode {
                         ViewMode::Tree => {
                             if let Some(action) = action {
