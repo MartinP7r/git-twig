@@ -1,4 +1,19 @@
-pub fn get_icon(name: &str) -> &'static str {
+pub fn get_icon(name: &str, is_dir: bool) -> &'static str {
+    if is_dir {
+        return match name {
+            "src" => "",
+            "tests" => "",
+            "build" | "dist" | "target" => "",
+            "docs" => "",
+            "config" => "",
+            "scripts" => "",
+            "assets" => "",
+            ".git" => "",
+            ".github" => "",
+            _ => "", // Default folder icon
+        };
+    }
+
     // Special files first
     match name {
         "LICENSE" => "",
@@ -7,15 +22,7 @@ pub fn get_icon(name: &str) -> &'static str {
         "Cargo.toml" => "",
         "package.json" => "",
         ".env" => "",
-        "src" => "",
-        "tests" => "",
-        "build" | "dist" | "target" => "",
-        "docs" => "",
-        "config" => "",
-        "scripts" => "",
-        "assets" => "",
-        ".git" => "",
-        ".github" => "",
+        ".gitignore" => "",
         _ => {
             if let Some(ext) = std::path::Path::new(name)
                 .extension()
@@ -43,7 +50,6 @@ pub fn get_icon(name: &str) -> &'static str {
                     "html" => "",
                     "sql" => "",
                     "png" | "jpg" | "jpeg" | "gif" | "svg" => "",
-                    "gitignore" => "",
                     _ => "",
                 }
             } else {
@@ -59,28 +65,29 @@ mod tests {
 
     #[test]
     fn test_known_extensions() {
-        assert_eq!(get_icon("file.rs"), "");
-        assert_eq!(get_icon("test.md"), "");
-        assert_eq!(get_icon("script.sh"), "");
+        assert_eq!(get_icon("file.rs", false), "");
+        assert_eq!(get_icon("test.md", false), "");
+        assert_eq!(get_icon("script.sh", false), "");
     }
 
     #[test]
     fn test_special_files() {
-        assert_eq!(get_icon("LICENSE"), "");
-        assert_eq!(get_icon("Makefile"), "");
-        assert_eq!(get_icon("Cargo.toml"), "");
+        assert_eq!(get_icon("LICENSE", false), "");
+        assert_eq!(get_icon("Makefile", false), "");
+        assert_eq!(get_icon("Cargo.toml", false), "");
     }
 
     #[test]
     fn test_special_directories() {
-        assert_eq!(get_icon("src"), "");
-        assert_eq!(get_icon("target"), "");
-        assert_eq!(get_icon(".git"), "");
+        assert_eq!(get_icon("src", true), "");
+        assert_eq!(get_icon("target", true), "");
+        assert_eq!(get_icon(".git", true), "");
+        assert_eq!(get_icon("other", true), "");
     }
 
     #[test]
     fn test_unknown_file() {
-        assert_eq!(get_icon("unknown.xyz"), "");
-        assert_eq!(get_icon("README"), ""); // No extension and not special
+        assert_eq!(get_icon("unknown.xyz", false), "");
+        assert_eq!(get_icon("README", false), ""); // No extension and not special
     }
 }

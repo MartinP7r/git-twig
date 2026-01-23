@@ -67,7 +67,7 @@ impl Node {
         match &self.node_type {
             NodeType::Directory { .. } => {
                 let icon = if theme.is_nerd && !theme.simple_icons {
-                    format!("{} ", icons::get_icon(&self.name))
+                    format!("{} ", icons::get_icon(&self.name, true))
                 } else {
                     theme.icon_dir.to_string()
                 };
@@ -83,7 +83,7 @@ impl Node {
                 };
 
                 let icon = if theme.is_nerd && !theme.simple_icons {
-                    format!("{} ", icons::get_icon(&self.name))
+                    format!("{} ", icons::get_icon(&self.name, false))
                 } else {
                     theme.icon_file.to_string()
                 };
@@ -289,7 +289,7 @@ impl Node {
         let icon = match &self.node_type {
             NodeType::Directory { .. } => {
                 let icon = if theme.is_nerd && !theme.simple_icons {
-                    format!("{} ", icons::get_icon(&self.name))
+                    format!("{} ", icons::get_icon(&self.name, true))
                 } else {
                     theme.icon_dir.to_string()
                 };
@@ -297,7 +297,7 @@ impl Node {
             }
             NodeType::File { .. } => {
                 if theme.is_nerd && !theme.simple_icons {
-                    format!("{} ", icons::get_icon(&self.name))
+                    format!("{} ", icons::get_icon(&self.name, false))
                 } else {
                     theme.icon_file.to_string()
                 }
