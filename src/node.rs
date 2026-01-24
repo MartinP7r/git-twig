@@ -1,10 +1,11 @@
 use crate::icons;
 use crate::theme::Theme;
 use colored::*;
+use serde::Serialize;
 use std::cmp::Ordering;
 use unicode_width::UnicodeWidthStr;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum NodeType {
     File {
         status: String,
@@ -15,7 +16,7 @@ pub enum NodeType {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Node {
     pub name: String,
     pub full_path: String,
@@ -519,9 +520,20 @@ mod tests {
         assert!(rendered.contains("src"));
         assert!(rendered.contains("a.txt"));
     }
+
+    #[test]
+    fn test_json_serialization() {
+        let file = Node::new_file("test.rs".into(), "test.rs".into(), "M".into(), None);
+        let root = Node::new_dir("src".into(), "src".into(), vec![file]);
+        
+        let json = serde_json::to_string(&root).unwrap();
+        assert!(json.contains("\"name\":\"src\""));
+        assert!(json.contains("\"name\":\"test.rs\""));
+        assert!(json.contains("\"status\":\"M\""));
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct FlatNode {
     pub name: String,
     pub name_colored: String,

@@ -50,6 +50,14 @@ struct Args {
     /// Use simple icons (generic folder/file) instead of rich Nerd Font icons
     #[arg(long)]
     simple_icons: bool,
+
+    /// Output in JSON format
+    #[arg(long)]
+    json: bool,
+
+    /// Output in YAML format
+    #[arg(long)]
+    yaml: bool,
 }
 
 fn determine_indent(arg_indent: Option<usize>) -> usize {
@@ -107,16 +115,30 @@ fn main() -> Result<()> {
         match git::build_tree_from_git(args.staged_only, args.modified_only, args.untracked_only) {
             Ok(Some(node)) => node,
             Ok(None) => {
-                if !args.open {
+                if !args.open && !args.json && !args.yaml {
                     if let Ok(header) = git::get_status_header() {
                         print_context_header(&header);
                     }
                     println!("(working directory clean)");
+                } else if args.json {
+                    println!("{{}}");
+                } else if args.yaml {
+                    println!("{{}}");
                 }
                 return Ok(());
             }
             Err(e) => return Err(e),
         };
+
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&result_node)?);
+        return Ok(());
+    }
+
+    if args.yaml {
+        println!("{}", serde_yaml::to_string(&result_node)?);
+        return Ok(());
+    }
 
     if args.open {
         let collapsed_paths = std::collections::HashSet::new();
