@@ -525,7 +525,7 @@ mod tests {
     fn test_json_serialization() {
         let file = Node::new_file("test.rs".into(), "test.rs".into(), "M".into(), None);
         let root = Node::new_dir("src".into(), "src".into(), vec![file]);
-        
+
         let json = serde_json::to_string(&root).unwrap();
         assert!(json.contains("\"name\":\"src\""));
         assert!(json.contains("\"name\":\"test.rs\""));
