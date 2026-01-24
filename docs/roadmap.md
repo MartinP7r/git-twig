@@ -65,4 +65,4 @@ Focus: Speeding up interactions for power users.
 - [x] **Scroll Resistance**: Add a small resistance/haptic-like pause when scrolling to the top edge before looping or stopping.
 - [x] **Help Modal Scrolling**: Allow navigation keys (`j`/`k`, labels, etc.) to scroll help text when overlay is visible.
 - [x] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.
-- [ ] **Diff Search**: Search for text *within* the diff content in Diff View.
+- [x] **Diff Search**: Search for text *within* the diff content in Diff View.

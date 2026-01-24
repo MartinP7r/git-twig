@@ -14,7 +14,18 @@ use crate::theme::Theme;
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     if app.view_mode == ViewMode::Diff {
-        let area = f.size();
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Length(if app.is_diff_search || !app.diff_search_query.is_empty() {
+                    3
+                } else {
+                    0
+                }),
+            ])
+            .split(f.size());
+
         let text = app
             .diff_content
             .into_text()
@@ -23,7 +34,38 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let paragraph = Paragraph::new(text)
             .block(Block::default().borders(Borders::ALL).title(" Diff "))
             .scroll((app.diff_scroll, 0));
-        f.render_widget(paragraph, area);
+        f.render_widget(paragraph, chunks[0]);
+
+        if app.is_diff_search || !app.diff_search_query.is_empty() {
+            let count_text = if app.diff_matches.is_empty() {
+                " (no matches) ".to_string()
+            } else {
+                format!(
+                    " [{}/{}] ",
+                    app.current_diff_match.map(|i| i + 1).unwrap_or(0),
+                    app.diff_matches.len()
+                )
+            };
+
+            let search_bar = Paragraph::new(Line::from(vec![
+                Span::styled(" Search: ", Style::default().fg(Color::Yellow)),
+                Span::raw(&app.diff_search_query),
+                Span::styled(count_text, Style::default().fg(Color::DarkGray)),
+            ]))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Yellow)),
+            );
+            f.render_widget(search_bar, chunks[1]);
+
+            if app.is_diff_search {
+                f.set_cursor(
+                    chunks[1].x + 10 + app.diff_search_query.width() as u16,
+                    chunks[1].y + 1,
+                );
+            }
+        }
         return;
     }
 

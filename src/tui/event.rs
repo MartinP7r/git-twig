@@ -32,6 +32,27 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                         }
                         _ => {}
                     }
+                } else if app.is_diff_search {
+                    match key.code {
+                        KeyCode::Char(c) => {
+                            app.diff_search_query.push(c);
+                            app.search_diff();
+                        }
+                        KeyCode::Backspace => {
+                            app.diff_search_query.pop();
+                            app.search_diff();
+                        }
+                        KeyCode::Esc => {
+                            app.is_diff_search = false;
+                            app.diff_search_query.clear();
+                            app.diff_matches.clear();
+                            app.current_diff_match = None;
+                        }
+                        KeyCode::Enter => {
+                            app.is_diff_search = false;
+                        }
+                        _ => {}
+                    }
                 } else {
                     let mut action = app.key_config.mappings.get(&key.code).cloned();
 
@@ -242,6 +263,21 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                     Action::PageUp => app.scroll_diff(-15),
                                     Action::PageDown => app.scroll_diff(15),
                                     Action::JumpToTop => app.scroll_diff(-1000), // Jump to top of diff
+                                    Action::Search => {
+                                        app.is_diff_search = true;
+                                        app.diff_search_query.clear();
+                                    }
+                                    _ => match key.code {
+                                        KeyCode::Char('n') => app.next_diff_match(),
+                                        KeyCode::Char('N') => app.prev_diff_match(),
+                                        _ => {}
+                                    },
+                                }
+                            } else {
+                                // Handle keys not in mappings (like n/N if not mapped)
+                                match key.code {
+                                    KeyCode::Char('n') => app.next_diff_match(),
+                                    KeyCode::Char('N') => app.prev_diff_match(),
                                     _ => {}
                                 }
                             }

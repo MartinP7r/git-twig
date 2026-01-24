@@ -109,6 +109,10 @@ pub struct App {
     pub worktree_state: ListState,
     pub show_worktrees: bool,
     pub max_help_scroll: u16,
+    pub diff_search_query: String,
+    pub is_diff_search: bool,
+    pub diff_matches: Vec<usize>,
+    pub current_diff_match: Option<usize>,
 }
 
 impl App {
@@ -148,6 +152,10 @@ impl App {
             worktree_state: ListState::default(),
             show_worktrees: false,
             max_help_scroll: 0,
+            diff_search_query: String::new(),
+            is_diff_search: false,
+            diff_matches: Vec::new(),
+            current_diff_match: None,
         };
         app.refresh()?;
         Ok(app)
@@ -732,6 +740,7 @@ impl App {
     pub fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
         self.help_scroll = 0;
+        self.is_diff_search = false;
     }
 
     pub fn scroll_help(&mut self, amount: i16) {
@@ -765,6 +774,61 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    pub fn search_diff(&mut self) {
+        self.diff_matches.clear();
+        self.current_diff_match = None;
+
+        if self.diff_search_query.is_empty() {
+            return;
+        }
+
+        let query = self.diff_search_query.to_lowercase();
+        for (i, line) in self.diff_content.lines().enumerate() {
+            // Strip ANSI codes for searching
+            let clean_line = strip_ansi_codes(line).to_lowercase();
+            if clean_line.contains(&query) {
+                self.diff_matches.push(i);
+            }
+        }
+
+        if !self.diff_matches.is_empty() {
+            self.current_diff_match = Some(0);
+            self.jump_to_diff_match();
+        }
+    }
+
+    pub fn next_diff_match(&mut self) {
+        if self.diff_matches.is_empty() {
+            return;
+        }
+        let current = self.current_diff_match.unwrap_or(0);
+        let next = (current + 1) % self.diff_matches.len();
+        self.current_diff_match = Some(next);
+        self.jump_to_diff_match();
+    }
+
+    pub fn prev_diff_match(&mut self) {
+        if self.diff_matches.is_empty() {
+            return;
+        }
+        let current = self.current_diff_match.unwrap_or(0);
+        let prev = if current == 0 {
+            self.diff_matches.len() - 1
+        } else {
+            current - 1
+        };
+        self.current_diff_match = Some(prev);
+        self.jump_to_diff_match();
+    }
+
+    fn jump_to_diff_match(&mut self) {
+        if let Some(i) = self.current_diff_match {
+            if let Some(&line_idx) = self.diff_matches.get(i) {
+                self.diff_scroll = line_idx as u16;
+            }
+        }
     }
 
     pub fn jump_to_top(&mut self) {
@@ -978,4 +1042,9 @@ mod tests {
         let filtered_none = App::filter_nodes(&nodes, "baz");
         assert_eq!(filtered_none.len(), 0);
     }
+}
+
+fn strip_ansi_codes(s: &str) -> String {
+    let re = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
+    re.replace_all(s, "").to_string()
 }
