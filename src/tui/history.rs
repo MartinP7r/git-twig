@@ -33,7 +33,6 @@ impl ActionHistory {
         self.undo_stack.push(entry.clone());
         Some(entry)
     }
-
 }
 
 #[cfg(test)]
