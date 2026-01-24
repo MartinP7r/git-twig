@@ -108,6 +108,7 @@ pub struct App {
     pub worktrees: Vec<Worktree>,
     pub worktree_state: ListState,
     pub show_worktrees: bool,
+    pub max_help_scroll: u16,
 }
 
 impl App {
@@ -146,6 +147,7 @@ impl App {
             worktrees: Vec::new(),
             worktree_state: ListState::default(),
             show_worktrees: false,
+            max_help_scroll: 0,
         };
         app.refresh()?;
         Ok(app)
@@ -735,6 +737,9 @@ impl App {
     pub fn scroll_help(&mut self, amount: i16) {
         if amount > 0 {
             self.help_scroll = self.help_scroll.saturating_add(amount as u16);
+            if self.help_scroll > self.max_help_scroll {
+                self.help_scroll = self.max_help_scroll;
+            }
         } else {
             self.help_scroll = self.help_scroll.saturating_sub((-amount) as u16);
         }

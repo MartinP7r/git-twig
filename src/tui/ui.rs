@@ -153,7 +153,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     }
 }
 
-fn render_help_modal(f: &mut Frame, app: &App) {
+fn render_help_modal(f: &mut Frame, app: &mut App) {
     let area = centered_rect(60, 60, f.size());
     let help_text = vec![
         Line::from(vec![
@@ -226,6 +226,12 @@ fn render_help_modal(f: &mut Frame, app: &App) {
         .title(" Help ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Yellow));
+
+    let visible_height = area.height.saturating_sub(2);
+    app.max_help_scroll = (help_text.len() as u16).saturating_sub(visible_height);
+    if app.help_scroll > app.max_help_scroll {
+        app.help_scroll = app.max_help_scroll;
+    }
 
     let paragraph = Paragraph::new(help_text)
         .block(block)
@@ -361,9 +367,7 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
         let right_content = Line::from(vec![
             Span::raw(" ["),
             Span::styled("?", Style::default().fg(Color::Yellow)),
-            Span::raw("] Help ["),
-            Span::styled("w", Style::default().fg(Color::Cyan)),
-            Span::raw("] Worktrees "),
+            Span::raw("] Help "),
         ]);
 
         let block = Block::default()
@@ -374,7 +378,7 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
 
         let layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Min(0), Constraint::Length(30)])
+            .constraints([Constraint::Min(0), Constraint::Length(10)])
             .split(inner_area);
 
         f.render_widget(Paragraph::new(left_content), layout[0]);
