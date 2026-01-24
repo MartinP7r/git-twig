@@ -64,5 +64,5 @@ Focus: Speeding up interactions for power users.
 - [x] **Action History**: Undo/Redo support for staging operations.
 - [x] **Scroll Resistance**: Add a small resistance/haptic-like pause when scrolling to the top edge before looping or stopping.
 - [x] **Help Modal Scrolling**: Allow navigation keys (`j`/`k`, labels, etc.) to scroll help text when overlay is visible.
-- [ ] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.
+- [x] **Git Worktrees Support**: Visualize and navigate between multiple worktrees.
 - [ ] **Diff Search**: Search for text *within* the diff content in Diff View.

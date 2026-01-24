@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use unicode_width::UnicodeWidthStr;
 
 use crate::config::KeyConfig;
-use crate::git;
+use crate::git::{self, Worktree};
 use crate::node::FlatNode;
 use crate::theme::{Theme, ThemeType};
 use crate::tui::history::{ActionHistory, StageAction};
@@ -105,6 +105,9 @@ pub struct App {
     pub hit_bottom_edge: bool,
     pub history: ActionHistory,
     pub help_scroll: u16,
+    pub worktrees: Vec<Worktree>,
+    pub worktree_state: ListState,
+    pub show_worktrees: bool,
 }
 
 impl App {
@@ -140,6 +143,9 @@ impl App {
             hit_bottom_edge: false,
             history: ActionHistory::default(),
             help_scroll: 0,
+            worktrees: Vec::new(),
+            worktree_state: ListState::default(),
+            show_worktrees: false,
         };
         app.refresh()?;
         Ok(app)
@@ -732,6 +738,28 @@ impl App {
         } else {
             self.help_scroll = self.help_scroll.saturating_sub((-amount) as u16);
         }
+    }
+
+    pub fn toggle_worktrees(&mut self) -> Result<()> {
+        if !self.show_worktrees {
+            self.worktrees = git::get_worktrees()?;
+            if !self.worktrees.is_empty() {
+                self.worktree_state.select(Some(0));
+            }
+        }
+        self.show_worktrees = !self.show_worktrees;
+        Ok(())
+    }
+
+    pub fn switch_worktree(&mut self) -> Result<()> {
+        if let Some(i) = self.worktree_state.selected() {
+            if let Some(wt) = self.worktrees.get(i) {
+                std::env::set_current_dir(&wt.path)?;
+                self.show_worktrees = false;
+                self.refresh()?;
+            }
+        }
+        Ok(())
     }
 
     pub fn jump_to_top(&mut self) {

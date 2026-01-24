@@ -147,6 +147,10 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     if app.show_help {
         render_help_modal(f, app);
     }
+
+    if app.show_worktrees {
+        render_worktree_selector(f, app);
+    }
 }
 
 fn render_help_modal(f: &mut Frame, app: &App) {
@@ -200,6 +204,7 @@ fn render_help_modal(f: &mut Frame, app: &App) {
         Line::from("  u/Ctrl+r : Undo / Redo stage"),
         Line::from("  Alt+V : Easter Egg tree view"),
         Line::from("  y     : Yank path to clipboard"),
+        Line::from("  w     : Switch Worktree"),
         Line::from(""),
         Line::from(vec![Span::styled(
             "Tips",
@@ -229,6 +234,49 @@ fn render_help_modal(f: &mut Frame, app: &App) {
 
     f.render_widget(ratatui::widgets::Clear, area); // Clear the background
     f.render_widget(paragraph, area);
+}
+
+fn render_worktree_selector(f: &mut Frame, app: &mut App) {
+    let area = centered_rect(60, 40, f.size());
+    let items: Vec<ListItem> = app
+        .worktrees
+        .iter()
+        .map(|wt| {
+            let branch = if wt.branch.is_empty() {
+                "(no branch)".to_string()
+            } else {
+                wt.branch.clone()
+            };
+            let content = vec![
+                Line::from(vec![
+                    Span::styled(format!("{:<15}", branch), Style::default().fg(Color::Cyan)),
+                    Span::raw(format!(" {}", wt.path)),
+                ]),
+                Line::from(vec![Span::styled(
+                    format!("  HEAD: {}", wt.head),
+                    Style::default().fg(Color::DarkGray),
+                )]),
+            ];
+            ListItem::new(content)
+        })
+        .collect();
+
+    let block = Block::default()
+        .title(" Switch Worktree ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan));
+
+    let list = List::new(items)
+        .block(block)
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol(">> ");
+
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_stateful_widget(list, area, &mut app.worktree_state);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -311,8 +359,11 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
 
         let left_content = Line::from(stats_spans);
         let right_content = Line::from(vec![
-            Span::raw("[?] "),
-            Span::styled("help", Style::default().fg(Color::Yellow)),
+            Span::raw(" ["),
+            Span::styled("?", Style::default().fg(Color::Yellow)),
+            Span::raw("] Help ["),
+            Span::styled("w", Style::default().fg(Color::Cyan)),
+            Span::raw("] Worktrees "),
         ]);
 
         let block = Block::default()
@@ -323,7 +374,7 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
 
         let layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Min(0), Constraint::Length(10)])
+            .constraints([Constraint::Min(0), Constraint::Length(30)])
             .split(inner_area);
 
         f.render_widget(Paragraph::new(left_content), layout[0]);

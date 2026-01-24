@@ -70,6 +70,48 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                         }
                     }
 
+                    if app.show_worktrees {
+                        match key.code {
+                            KeyCode::Esc => {
+                                app.show_worktrees = false;
+                                continue;
+                            }
+                            KeyCode::Char('j') | KeyCode::Down => {
+                                let i = match app.worktree_state.selected() {
+                                    Some(i) => {
+                                        if i >= app.worktrees.len() - 1 {
+                                            0
+                                        } else {
+                                            i + 1
+                                        }
+                                    }
+                                    None => 0,
+                                };
+                                app.worktree_state.select(Some(i));
+                                continue;
+                            }
+                            KeyCode::Char('k') | KeyCode::Up => {
+                                let i = match app.worktree_state.selected() {
+                                    Some(i) => {
+                                        if i == 0 {
+                                            app.worktrees.len() - 1
+                                        } else {
+                                            i - 1
+                                        }
+                                    }
+                                    None => 0,
+                                };
+                                app.worktree_state.select(Some(i));
+                                continue;
+                            }
+                            KeyCode::Enter => {
+                                let _ = app.switch_worktree();
+                                continue;
+                            }
+                            _ => {}
+                        }
+                    }
+
                     if app.show_help {
                         match key.code {
                             KeyCode::Char('j') | KeyCode::Down => {
@@ -184,6 +226,9 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                     }
                                     Action::Redo => {
                                         let _ = app.redo_staging();
+                                    }
+                                    Action::ToggleWorktrees => {
+                                        let _ = app.toggle_worktrees();
                                     }
                                 }
                             }

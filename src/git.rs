@@ -1,9 +1,17 @@
 use anyhow::{Context, Result};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::process::Command;
 
 use crate::node;
 use crate::parser;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Worktree {
+    pub path: String,
+    pub head: String,
+    pub branch: String,
+}
 
 pub fn build_tree_from_git(
     staged_only: bool,
@@ -164,4 +172,81 @@ pub fn get_config_regexp(pattern: &str) -> HashMap<String, String> {
         }
     }
     map
+}
+
+pub fn get_worktrees() -> Result<Vec<Worktree>> {
+    let output = Command::new("git")
+        .args(["worktree", "list", "--porcelain"])
+        .output()
+        .context("Failed to list worktrees")?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Git worktree list failed: {}", err);
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_worktrees(&stdout))
+}
+
+fn parse_worktrees(stdout: &str) -> Vec<Worktree> {
+    let mut worktrees = Vec::new();
+    let mut current_path = String::new();
+    let mut current_head = String::new();
+    let mut current_branch = String::new();
+
+    for line in stdout.lines() {
+        if line.is_empty() {
+            if !current_path.is_empty() {
+                worktrees.push(Worktree {
+                    path: current_path.clone(),
+                    head: current_head.clone(),
+                    branch: current_branch.clone(),
+                });
+                current_path.clear();
+                current_head.clear();
+                current_branch.clear();
+            }
+            continue;
+        }
+
+        let parts: Vec<&str> = line.splitn(2, ' ').collect();
+        if parts.len() < 2 {
+            continue;
+        }
+
+        match parts[0] {
+            "worktree" => current_path = parts[1].to_string(),
+            "HEAD" => current_head = parts[1].to_string(),
+            "branch" => current_branch = parts[1].to_string(),
+            _ => {}
+        }
+    }
+
+    // Push the last one if it exists
+    if !current_path.is_empty() {
+        worktrees.push(Worktree {
+            path: current_path,
+            head: current_head,
+            branch: current_branch,
+        });
+    }
+
+    worktrees
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_worktrees() {
+        let output = "worktree /path/to/repo\nHEAD 123456\nbranch refs/heads/main\n\nworktree /path/to/other\nHEAD abcdef\nbranch refs/heads/dev\n";
+        let worktrees = parse_worktrees(output);
+        assert_eq!(worktrees.len(), 2);
+        assert_eq!(worktrees[0].path, "/path/to/repo");
+        assert_eq!(worktrees[0].branch, "refs/heads/main");
+        assert_eq!(worktrees[1].path, "/path/to/other");
+        assert_eq!(worktrees[1].branch, "refs/heads/dev");
+    }
 }
