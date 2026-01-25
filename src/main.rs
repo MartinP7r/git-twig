@@ -120,9 +120,7 @@ fn main() -> Result<()> {
                         print_context_header(&header);
                     }
                     println!("(working directory clean)");
-                } else if args.json {
-                    println!("{{}}");
-                } else if args.yaml {
+                } else if args.json || args.yaml {
                     println!("{{}}");
                 }
                 return Ok(());
