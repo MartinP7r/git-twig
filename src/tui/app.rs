@@ -113,6 +113,8 @@ pub struct App {
     pub is_diff_search: bool,
     pub diff_matches: Vec<usize>,
     pub current_diff_match: Option<usize>,
+    pub show_commit_dialog: bool,
+    pub commit_message: String,
 }
 
 impl App {
@@ -156,6 +158,8 @@ impl App {
             is_diff_search: false,
             diff_matches: Vec::new(),
             current_diff_match: None,
+            show_commit_dialog: false,
+            commit_message: String::new(),
         };
         app.refresh()?;
         Ok(app)
@@ -797,6 +801,25 @@ impl App {
             self.current_diff_match = Some(0);
             self.jump_to_diff_match();
         }
+    }
+
+    pub fn open_commit_dialog(&mut self) {
+        self.show_commit_dialog = true;
+        self.commit_message.clear();
+    }
+
+    pub fn close_commit_dialog(&mut self) {
+        self.show_commit_dialog = false;
+        self.commit_message.clear();
+    }
+
+    pub fn confirm_commit(&mut self) -> Result<()> {
+        if !self.commit_message.is_empty() {
+            git::commit(&self.commit_message)?;
+            self.close_commit_dialog();
+            self.refresh()?;
+        }
+        Ok(())
     }
 
     pub fn next_diff_match(&mut self) {

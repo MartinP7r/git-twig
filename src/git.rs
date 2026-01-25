@@ -112,6 +112,19 @@ pub fn toggle_stage(path: &str, is_staged: bool) -> Result<()> {
     Ok(())
 }
 
+pub fn commit(message: &str) -> Result<()> {
+    let output = Command::new("git")
+        .args(["commit", "-m", message])
+        .output()
+        .context("Failed to execute git commit")?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("Git commit failed: {}", err);
+    }
+    Ok(())
+}
+
 pub fn get_diff(path: &str, is_staged: bool, is_untracked: bool) -> Result<String> {
     let mut args = vec!["diff", "--color=always"];
 

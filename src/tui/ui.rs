@@ -193,6 +193,10 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     if app.show_worktrees {
         render_worktree_selector(f, app);
     }
+
+    if app.show_commit_dialog {
+        render_commit_dialog(f, app);
+    }
 }
 
 fn render_help_modal(f: &mut Frame, app: &mut App) {
@@ -282,6 +286,35 @@ fn render_help_modal(f: &mut Frame, app: &mut App) {
 
     f.render_widget(ratatui::widgets::Clear, area); // Clear the background
     f.render_widget(paragraph, area);
+}
+
+fn render_commit_dialog(f: &mut Frame, app: &mut App) {
+    let area = centered_rect(50, 20, f.size());
+    let block = Block::default()
+        .title(" Commit Message ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Green));
+
+    let text = vec![
+        Line::from(vec![
+            Span::raw(&app.commit_message),
+            Span::styled("_", Style::default().add_modifier(Modifier::SLOW_BLINK)),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
+            Span::raw(" to commit, "),
+            Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
+            Span::raw(" to cancel"),
+        ]),
+    ];
+
+    let p = Paragraph::new(text)
+        .block(block)
+        .wrap(ratatui::widgets::Wrap { trim: false });
+
+    f.render_widget(ratatui::widgets::Clear, area);
+    f.render_widget(p, area);
 }
 
 fn render_worktree_selector(f: &mut Frame, app: &mut App) {

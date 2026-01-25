@@ -33,6 +33,7 @@ pub enum Action {
     Undo,
     Redo,
     ToggleWorktrees,
+    Commit,
 }
 
 #[derive(Clone)]
@@ -70,6 +71,7 @@ impl Default for KeyConfig {
         mappings.insert(KeyCode::Char('y'), Action::YankPath);
         mappings.insert(KeyCode::Char('V'), Action::VisualMode);
         mappings.insert(KeyCode::Char('u'), Action::Undo);
+        mappings.insert(KeyCode::Char('c'), Action::Commit);
         mappings.insert(KeyCode::Char('w'), Action::ToggleWorktrees);
         // Alt+V for Easter Egg (Option+V on Mac)
         // We'll handle modifiers specifically in event loop if needed,
@@ -143,6 +145,7 @@ fn parse_action(s: &str) -> Option<Action> {
         "undo" => Some(Action::Undo),
         "redo" => Some(Action::Redo),
         "worktrees" | "toggle_worktrees" => Some(Action::ToggleWorktrees),
+        "commit" => Some(Action::Commit),
         _ => None,
     }
 }

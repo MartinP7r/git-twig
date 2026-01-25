@@ -12,7 +12,26 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
 
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                if app.is_typing_search {
+                if app.show_commit_dialog {
+                    match key.code {
+                        KeyCode::Char(c) => {
+                            app.commit_message.push(c);
+                        }
+                        KeyCode::Backspace => {
+                            app.commit_message.pop();
+                        }
+                        KeyCode::Esc => {
+                            app.close_commit_dialog();
+                        }
+                        KeyCode::Enter => {
+                            if let Err(e) = app.confirm_commit() {
+                                // TODO: Show error
+                                eprintln!("Error committing: {}", e);
+                            }
+                        }
+                        _ => {}
+                    }
+                } else if app.is_typing_search {
                     match key.code {
                         KeyCode::Char(c) => {
                             app.search_query.push(c);
@@ -250,6 +269,9 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                     }
                                     Action::ToggleWorktrees => {
                                         let _ = app.toggle_worktrees();
+                                    }
+                                    Action::Commit => {
+                                        app.open_commit_dialog();
                                     }
                                 }
                             }
