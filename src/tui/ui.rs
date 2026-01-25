@@ -26,13 +26,55 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             ])
             .split(f.size());
 
-        let text = app
-            .diff_content
-            .into_text()
-            .unwrap_or_else(|_| ratatui::text::Text::raw(&app.diff_content));
+        let text = if app.patch_mode {
+            let mut lines = Vec::new();
+            let raw_lines: Vec<&str> = app.diff_content.lines().collect();
+            let selected_hunk_range = app.selected_hunk_idx.and_then(|idx| {
+                app.diff_hunks
+                    .get(idx)
+                    .map(|hunk| (hunk.display_start, hunk.display_end))
+            });
+
+            for (i, line) in raw_lines.iter().enumerate() {
+                let mut style = Style::default();
+
+                // Basic syntax highlighting
+                if line.starts_with('+') {
+                    style = style.fg(Color::Green);
+                } else if line.starts_with('-') {
+                    style = style.fg(Color::Red);
+                } else if line.starts_with("@@") {
+                    style = style.fg(Color::Cyan);
+                }
+
+                // Selection Highlighting
+                if let Some((start, end)) = selected_hunk_range {
+                    if i >= start && i <= end {
+                        style = style
+                            .bg(Color::Rgb(50, 50, 50))
+                            .add_modifier(Modifier::BOLD);
+                    } else {
+                        style = style.add_modifier(Modifier::DIM); // Dim others
+                    }
+                }
+
+                lines.push(Line::from(Span::styled(*line, style)));
+            }
+            ratatui::text::Text::from(lines)
+        } else {
+            app.diff_content
+                .into_text()
+                .unwrap_or_else(|_| ratatui::text::Text::raw(&app.diff_content))
+        };
+
+        let title = if app.patch_mode {
+            " Diff (Patch Mode: Space to Stage, p to Exit) "
+        } else {
+            " Diff (p to Patch) "
+        };
 
         let paragraph = Paragraph::new(text)
-            .block(Block::default().borders(Borders::ALL).title(" Diff "))
+            .block(Block::default().borders(Borders::ALL).title(title))
             .scroll((app.diff_scroll, 0));
         f.render_widget(paragraph, chunks[0]);
 

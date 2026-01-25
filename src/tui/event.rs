@@ -279,9 +279,28 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                         ViewMode::Diff => {
                             if let Some(action) = action {
                                 match action {
-                                    Action::Quit | Action::Back | Action::Diff => app.close_diff(),
-                                    Action::MoveDown => app.scroll_diff(1),
-                                    Action::MoveUp => app.scroll_diff(-1),
+                                    Action::Quit | Action::Back => {
+                                        if app.patch_mode {
+                                            app.toggle_patch_mode();
+                                        } else {
+                                            app.close_diff();
+                                        }
+                                    }
+                                    Action::Diff => app.close_diff(),
+                                    Action::MoveDown => {
+                                        if app.patch_mode {
+                                            app.next_hunk();
+                                        } else {
+                                            app.scroll_diff(1);
+                                        }
+                                    }
+                                    Action::MoveUp => {
+                                        if app.patch_mode {
+                                            app.prev_hunk();
+                                        } else {
+                                            app.scroll_diff(-1);
+                                        }
+                                    }
                                     Action::PageUp => app.scroll_diff(-15),
                                     Action::PageDown => app.scroll_diff(15),
                                     Action::JumpToTop => app.scroll_diff(-1000), // Jump to top of diff
@@ -289,9 +308,15 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                         app.is_diff_search = true;
                                         app.diff_search_query.clear();
                                     }
+                                    Action::Stage => {
+                                        if app.patch_mode {
+                                            let _ = app.stage_hunk();
+                                        }
+                                    }
                                     _ => match key.code {
                                         KeyCode::Char('n') => app.next_diff_match(),
                                         KeyCode::Char('N') => app.prev_diff_match(),
+                                        KeyCode::Char('p') => app.toggle_patch_mode(),
                                         _ => {}
                                     },
                                 }
@@ -300,6 +325,7 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                 match key.code {
                                     KeyCode::Char('n') => app.next_diff_match(),
                                     KeyCode::Char('N') => app.prev_diff_match(),
+                                    KeyCode::Char('p') => app.toggle_patch_mode(),
                                     _ => {}
                                 }
                             }

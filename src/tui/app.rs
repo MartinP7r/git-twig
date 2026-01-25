@@ -115,6 +115,11 @@ pub struct App {
     pub current_diff_match: Option<usize>,
     pub show_commit_dialog: bool,
     pub commit_message: String,
+    // Patch Mode
+    pub patch_mode: bool,
+    pub diff_headers: Vec<String>,
+    pub diff_hunks: Vec<crate::git::Hunk>,
+    pub selected_hunk_idx: Option<usize>,
 }
 
 impl App {
@@ -160,6 +165,10 @@ impl App {
             current_diff_match: None,
             show_commit_dialog: false,
             commit_message: String::new(),
+            patch_mode: false,
+            diff_headers: Vec::new(),
+            diff_hunks: Vec::new(),
+            selected_hunk_idx: None,
         };
         app.refresh()?;
         Ok(app)
@@ -822,6 +831,145 @@ impl App {
         Ok(())
     }
 
+    pub fn toggle_patch_mode(&mut self) {
+        if self.view_mode != ViewMode::Diff {
+            return;
+        }
+
+        self.patch_mode = !self.patch_mode;
+        if self.patch_mode {
+            let (headers, hunks) = git::patch::parse_diff(&self.diff_content);
+            self.diff_headers = headers;
+            self.diff_hunks = hunks;
+            if !self.diff_hunks.is_empty() {
+                self.selected_hunk_idx = Some(0);
+                self.jump_to_hunk();
+            }
+        } else {
+            self.diff_headers.clear();
+            self.diff_hunks.clear();
+            self.selected_hunk_idx = None;
+        }
+    }
+
+    pub fn next_hunk(&mut self) {
+        if let Some(i) = self.selected_hunk_idx {
+            if i < self.diff_hunks.len() - 1 {
+                self.selected_hunk_idx = Some(i + 1);
+                self.jump_to_hunk();
+            }
+        }
+    }
+
+    pub fn prev_hunk(&mut self) {
+        if let Some(i) = self.selected_hunk_idx {
+            if i > 0 {
+                self.selected_hunk_idx = Some(i - 1);
+                self.jump_to_hunk();
+            }
+        }
+    }
+
+    fn jump_to_hunk(&mut self) {
+        if let Some(i) = self.selected_hunk_idx {
+            if let Some(hunk) = self.diff_hunks.get(i) {
+                // Adjust scroll to center the hunk
+                let target = hunk.display_start as u16;
+                // Simple version: jump to top
+                self.diff_scroll = target;
+            }
+        }
+    }
+
+    pub fn stage_hunk(&mut self) -> Result<()> {
+        if let Some(i) = self.selected_hunk_idx {
+            if let Some(hunk) = self.diff_hunks.get(i) {
+                let is_staged = if let Some(idx) = self.unified_state.selected() {
+                    // This is tricky: we need to know if the CURRENT file is staged or not
+                    // But patch mode is generic.
+                    // Generally, if we are in Diff view, we are diffing a specific file node.
+                    // And we know the status of that node.
+                    // We should pass 'stage' boolean direction.
+                    // However, git apply --cached applies TO the index (staging it).
+                    // git apply --reverse --cached would UNSTAGE it.
+                    // We need to know if we are 'Adding' or 'Resetting'.
+                    // Let's rely on the raw_status of the selected node.
+                    false // FIXME: Logic needed below
+                } else {
+                    false
+                };
+
+                // For now, let's assume this is mostly for STAGING (add -p).
+                // But unstage -p is also valid.
+                // We need to look up the node again.
+                // This is slightly inefficient but safe.
+
+                let node = self.get_selected_node();
+                if let Some(n) = node {
+                    let is_staged = n.raw_status.contains('+');
+                    if is_staged {
+                        // Unstage: git apply --cached --reverse
+                        // Not implemented in helper yet, but we can just use `git restore --patch`?
+                        // Or update apply_patch to support reverse.
+                        // Let's update apply_patch first.
+                        // For now, let's just support Staging (add -p equivalent).
+                        // If user tries to stage checks on a staged file, it does nothing or errors.
+
+                        // Actually, apply_patch takes 'headers'.
+                        // If we are unstaging, we might need --reverse.
+                        // Let's start with just handling Staging for v1.3.0 scope if complex.
+                        // roadmap says "Interactive Patch Staging".
+
+                        git::patch::apply_patch(&self.diff_headers, hunk, true)?;
+                    } else {
+                        // Stage: git apply --cached
+                        git::patch::apply_patch(&self.diff_headers, hunk, true)?;
+                    }
+
+                    // Refresh to show status change
+                    // self.refresh()?;
+                    // Ideally we stay in diff mode but refresh the underlying diff?
+                    // If we stage a hunk, it disappears from "Unstaged" diff.
+                    // So refreshing is good.
+                    self.refresh()?;
+
+                    // Re-parse diff to keep index validity?
+                    // Or just close patch mode?
+                    // Most robust: close patch mode or re-parse.
+                    self.toggle_patch_mode(); // Close for safety
+                    self.show_diff()?; // Re-open diff (will fetch new content)
+                    self.toggle_patch_mode(); // Re-enable? Maybe annoying.
+                                              // Let's just exit patch mode and let user re-enter if they want more.
+                    self.toggle_patch_mode(); // Off
+                    self.show_diff()?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn get_selected_node(&self) -> Option<&crate::node::FlatNode> {
+        let (nodes, state) = match self.layout {
+            AppLayout::Unified | AppLayout::Compact | AppLayout::EasterEgg => {
+                (&self.unified_nodes, &self.unified_state)
+            }
+            AppLayout::Split => match self.focus {
+                Focus::Staged => (&self.staged_nodes, &self.staged_state),
+                Focus::Unstaged => (&self.unstaged_nodes, &self.unstaged_state),
+            },
+        };
+        // Simplified: use self.filter_nodes logic...
+        // Actually, we are already in Diff View, so we must have a selected node.
+        // We can just re-use the logic from show_diff.
+        // BUT, retrieving it cleanly is better.
+
+        let filtered = Self::filter_nodes(nodes, &self.search_query);
+        if let Some(i) = state.selected() {
+            filtered.get(i).copied()
+        } else {
+            None
+        }
+    }
     pub fn next_diff_match(&mut self) {
         if self.diff_matches.is_empty() {
             return;

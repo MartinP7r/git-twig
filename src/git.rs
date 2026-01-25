@@ -6,6 +6,9 @@ use std::process::Command;
 use crate::node;
 use crate::parser;
 
+pub mod patch;
+pub use patch::Hunk;
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Worktree {
     pub path: String,

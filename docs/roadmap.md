@@ -37,7 +37,7 @@ Focus: Power-user speed and premium documentation.
 ## Upcoming: v1.3.0 - The "Commit" Milestone ✍️
 Focus: Completing the local development loop.
 
-- [ ] **TUI Commit**: Press `c` to commit staged changes.
+- [x] **TUI Commit**: Press `c` to commit staged changes.
     - Simplified commit message input field.
     - Option to launch `$EDITOR` for long messages.
 - [ ] **Interactive Patch Staging**: Select and stage specific hunks or lines within the Diff View.
