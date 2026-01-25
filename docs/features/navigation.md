@@ -15,7 +15,7 @@ Git-twig is designed to keep your hands on the home row. It supports advanced Vi
 
 - **`gg`**: Jump to the very top of the list.
 - **`G`**: Jump to the very bottom of the list.
-- **`zz`**: Center the current selection in the viewport.
+
 - **`Ctrl+u`**: Page up (scrolls half the screen).
 - **`Ctrl+d`**: Page down (scrolls half the screen).
 
