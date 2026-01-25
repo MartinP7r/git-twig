@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use std::process::Command;
 use std::io::Write;
+use std::process::Command;
 
 #[derive(Debug, Clone)]
 pub struct Hunk {
@@ -16,7 +16,7 @@ pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
 
     let lines: Vec<&str> = diff_content.lines().collect();
     let mut i = 0;
-    
+
     // 1. Parse File Headers (everything before the first @@)
     while i < lines.len() {
         let line = lines[i];
@@ -36,7 +36,7 @@ pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
             let mut content = String::new();
             content.push_str(line);
             content.push('\n');
-            
+
             i += 1;
             while i < lines.len() {
                 let inner_line = lines[i];
@@ -47,7 +47,7 @@ pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
                 content.push('\n');
                 i += 1;
             }
-            
+
             hunks.push(Hunk {
                 header,
                 content,
@@ -77,7 +77,8 @@ pub fn apply_patch(headers: &[String], hunk: &Hunk, stage: bool) -> Result<()> {
     }
     cmd.arg("-"); // Read from stdin
 
-    let mut child = cmd.stdin(std::process::Stdio::piped())
+    let mut child = cmd
+        .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()

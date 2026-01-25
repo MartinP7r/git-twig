@@ -280,11 +280,11 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                             if let Some(action) = action {
                                 match action {
                                     Action::Quit | Action::Back => {
-                                         if app.patch_mode {
-                                             app.toggle_patch_mode();
-                                         } else {
-                                             app.close_diff();
-                                         }
+                                        if app.patch_mode {
+                                            app.toggle_patch_mode();
+                                        } else {
+                                            app.close_diff();
+                                        }
                                     }
                                     Action::Diff => app.close_diff(),
                                     Action::MoveDown => {
