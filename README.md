@@ -17,7 +17,7 @@ It includes a visual diff bar (e.g., `++++----`) to show the scale of changes.
 
 ### via Homebrew (Recommended)
 ```bash
-brew tap MartinP7r/homebrew-tap
+brew tap MartinP7r/tap
 brew install git-twig
 ```
 

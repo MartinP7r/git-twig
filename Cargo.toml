@@ -23,6 +23,6 @@ regex = "1.10"
 # The preferred name of your installer
 formula = "git-twig"
 # Target the user's homebrew-tap
-tap = "MartinP7r/homebrew-tap"
+tap = "MartinP7r/tap"
 # Repository for releases
 repository = "https://github.com/MartinP7r/git-twig"
