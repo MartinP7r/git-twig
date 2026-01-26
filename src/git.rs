@@ -129,7 +129,7 @@ pub fn commit(message: &str) -> Result<()> {
 }
 
 pub fn get_diff(path: &str, is_staged: bool, is_untracked: bool) -> Result<String> {
-    let mut args = vec!["diff", "--color=always"];
+    let mut args = vec!["diff"];
 
     if is_staged {
         args.push("--cached");

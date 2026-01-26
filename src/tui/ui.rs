@@ -1,4 +1,4 @@
-use ansi_to_tui::IntoText;
+
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -62,9 +62,19 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             }
             ratatui::text::Text::from(lines)
         } else {
-            app.diff_content
-                .into_text()
-                .unwrap_or_else(|_| ratatui::text::Text::raw(&app.diff_content))
+            let mut lines = Vec::new();
+            for line in app.diff_content.lines() {
+                let mut style = Style::default();
+                if line.starts_with('+') {
+                    style = style.fg(Color::Green);
+                } else if line.starts_with('-') {
+                    style = style.fg(Color::Red);
+                } else if line.starts_with("@@") {
+                    style = style.fg(Color::Cyan);
+                }
+                lines.push(Line::from(Span::styled(line, style)));
+            }
+            ratatui::text::Text::from(lines)
         };
 
         let title = if app.patch_mode {
@@ -312,6 +322,7 @@ fn render_help_modal(f: &mut Frame, app: &mut App) {
 
     let block = Block::default()
         .title(" Help ")
+        .title_alignment(ratatui::layout::Alignment::Center)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Yellow));
 

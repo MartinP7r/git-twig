@@ -11,10 +11,7 @@ pub struct Hunk {
     pub display_end: usize,
 }
 
-fn strip_ansi_codes(s: &str) -> String {
-    let re = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
-    re.replace_all(s, "").to_string()
-}
+
 
 pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
     let mut headers = Vec::new();
@@ -26,8 +23,7 @@ pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
     // 1. Parse File Headers (everything before the first @@)
     while i < lines.len() {
         let line = lines[i];
-        let plain_line = strip_ansi_codes(line);
-        if plain_line.starts_with("@@") {
+        if line.starts_with("@@") {
             break;
         }
         headers.push(line.to_string());
@@ -37,8 +33,7 @@ pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
     // 2. Parse Hunks
     while i < lines.len() {
         let line = lines[i];
-        let plain_line = strip_ansi_codes(line);
-        if plain_line.starts_with("@@") {
+        if line.starts_with("@@") {
             let start = i;
             let header = line.to_string(); // Keep colored header for display mapping? No, Hunk structure is generic.
                                            // Actually, we use Hunk for display range.
@@ -51,17 +46,16 @@ pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
                                            // Yes, git apply failed likely because of colors too.
 
             let mut content = String::new();
-            content.push_str(&plain_line);
+            content.push_str(line);
             content.push('\n');
 
             i += 1;
             while i < lines.len() {
                 let inner_line = lines[i];
-                let plain_inner = strip_ansi_codes(inner_line);
-                if plain_inner.starts_with("@@") {
+                if inner_line.starts_with("@@") {
                     break; // Next hunk
                 }
-                content.push_str(&plain_inner);
+                content.push_str(inner_line);
                 content.push('\n');
                 i += 1;
             }
@@ -83,7 +77,7 @@ pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
 pub fn apply_patch(headers: &[String], hunk: &Hunk, stage: bool) -> Result<()> {
     let mut patch_content = String::new();
     for header in headers {
-        patch_content.push_str(&strip_ansi_codes(header));
+        patch_content.push_str(header);
         patch_content.push('\n');
     }
     patch_content.push_str(&hunk.content); // hunk.content is already stripped now
