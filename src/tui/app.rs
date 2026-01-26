@@ -1189,6 +1189,7 @@ mod tests {
                 connector: "".into(),
                 stats: None,
                 depth: 0,
+                is_collapsed: false,
             },
             FlatNode {
                 name: "bar.rs".into(),
@@ -1200,6 +1201,7 @@ mod tests {
                 connector: "".into(),
                 stats: None,
                 depth: 0,
+                is_collapsed: false,
             },
         ];
 

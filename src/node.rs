@@ -199,6 +199,7 @@ impl Node {
             connector: String::new(),
             stats: self.get_stats(),
             depth: 0,
+            is_collapsed: false,
         });
 
         if let NodeType::Directory { children } = &self.node_type {
@@ -251,6 +252,8 @@ impl Node {
             let dashes = theme.tree_dash.to_string().repeat(indent_size - 2);
             let full_connector = format!("{}{}{} ", prefix, connector_symbol, dashes);
 
+            let is_collapsed = collapsed_paths.contains(&display_node.full_path);
+
             out.push(FlatNode {
                 name: display_node.get_display_name_clean(theme),
                 name_colored: display_node.format_name(theme),
@@ -261,10 +264,11 @@ impl Node {
                 connector: full_connector,
                 stats: display_node.get_stats(),
                 depth,
+                is_collapsed,
             });
 
             if let Some(grand_children) = children_to_render {
-                if !collapsed_paths.contains(&display_node.full_path) {
+                if !is_collapsed {
                     let new_prefix = if is_last {
                         format!("{}  {}", prefix, " ".repeat(indent_size - 2))
                     } else {
@@ -544,4 +548,5 @@ pub struct FlatNode {
     pub connector: String,
     pub stats: Option<(usize, usize)>,
     pub depth: usize,
+    pub is_collapsed: bool,
 }

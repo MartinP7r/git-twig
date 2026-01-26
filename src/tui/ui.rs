@@ -297,7 +297,6 @@ fn render_help_modal(f: &mut Frame, app: &mut App) {
         )]),
         Line::from("  gg    : Jump to top"),
         Line::from("  G     : Jump to bottom"),
-        Line::from("  zz    : Center cursor"),
         Line::from("  u/Ctrl+r : Undo / Redo stage"),
         Line::from("  Alt+V : Easter Egg tree view"),
         Line::from("  y     : Yank path to clipboard"),
@@ -574,7 +573,15 @@ fn render_list(
             } else {
                 Style::default().fg(theme.color_file)
             };
-            let name = Span::styled(&node.name, name_style);
+            let mut name_str = node.name.clone();
+            if node.is_dir {
+                if node.is_collapsed {
+                    name_str.push_str(" [+]");
+                } else {
+                    name_str.push_str(" [-]");
+                }
+            }
+            let name = Span::styled(name_str, name_style);
 
             let mut spans = vec![
                 Span::raw(prefix),
@@ -583,7 +590,7 @@ fn render_list(
                 connector,
                 name,
             ];
-            let width = node.connector.width() + node.name.width();
+            let width = node.connector.width() + node.name.width() + if node.is_dir { 4 } else { 0 };
             let padding_len = max_name_width.saturating_sub(width);
             let padding = " ".repeat(padding_len);
 
