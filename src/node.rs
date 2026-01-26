@@ -189,8 +189,10 @@ impl Node {
     ) -> Vec<FlatNode> {
         let mut flattened = Vec::new();
         // Add root
+        let (icon, clean_name) = self.get_icon_and_name(theme);
         flattened.push(FlatNode {
-            name: self.get_display_name_clean(theme),
+            name: clean_name,
+            icon: icon.to_string(),
             name_colored: self.format_name(theme),
             full_path: self.full_path.clone(),
             is_dir: self.is_dir(),
@@ -200,6 +202,7 @@ impl Node {
             stats: self.get_stats(),
             depth: 0,
             is_collapsed: false,
+            icon_color: icons::get_icon_color(&self.name, self.is_dir()),
         });
 
         if let NodeType::Directory { children } = &self.node_type {
@@ -252,10 +255,12 @@ impl Node {
             let dashes = theme.tree_dash.to_string().repeat(indent_size - 2);
             let full_connector = format!("{}{}{} ", prefix, connector_symbol, dashes);
 
+            let (icon, clean_name) = display_node.get_icon_and_name(theme);
             let is_collapsed = collapsed_paths.contains(&display_node.full_path);
 
             out.push(FlatNode {
-                name: display_node.get_display_name_clean(theme),
+                name: clean_name,
+                icon: icon.to_string(),
                 name_colored: display_node.format_name(theme),
                 full_path: display_node.full_path.clone(),
                 is_dir: display_node.is_dir(),
@@ -265,6 +270,7 @@ impl Node {
                 stats: display_node.get_stats(),
                 depth,
                 is_collapsed,
+                icon_color: icons::get_icon_color(&display_node.name, display_node.is_dir()),
             });
 
             if let Some(grand_children) = children_to_render {
@@ -295,15 +301,14 @@ impl Node {
         }
     }
 
-    pub fn get_display_name_clean(&self, theme: &Theme) -> String {
+    pub fn get_icon_and_name(&self, theme: &Theme) -> (String, String) {
         let icon = match &self.node_type {
             NodeType::Directory { .. } => {
-                let icon = if theme.is_nerd && !theme.simple_icons {
+                if theme.is_nerd && !theme.simple_icons {
                     format!("{} ", icons::get_icon(&self.name, true))
                 } else {
                     theme.icon_dir.to_string()
-                };
-                icon
+                }
             }
             NodeType::File { .. } => {
                 if theme.is_nerd && !theme.simple_icons {
@@ -315,10 +320,8 @@ impl Node {
         };
 
         match &self.node_type {
-            NodeType::Directory { .. } => format!("{}{}", icon, self.name),
-            NodeType::File { status, .. } => {
-                format!("{}{}{} ({})", icon, self.name, "", status)
-            }
+            NodeType::Directory { .. } => (icon, self.name.clone()),
+            NodeType::File { status, .. } => (icon, format!("{} ({})", self.name, status)),
         }
     }
 
@@ -503,15 +506,6 @@ mod tests {
     }
 
     #[test]
-    fn test_display_name_clean() {
-        let theme = Theme::unicode();
-        let node = Node::new_file("test.rs".into(), "test.rs".into(), "M".into(), None);
-        let clean = node.get_display_name_clean(&theme);
-        // Clean name for files includes the status code
-        assert_eq!(clean, "test.rs (M)");
-    }
-
-    #[test]
     fn test_render_tree_simple() {
         let theme = Theme::ascii();
         let file = Node::new_file("a.txt".into(), "a.txt".into(), "M".into(), None);
@@ -540,6 +534,7 @@ mod tests {
 #[derive(Debug, Clone, Serialize)]
 pub struct FlatNode {
     pub name: String,
+    pub icon: String,
     pub name_colored: String,
     pub full_path: String,
     pub is_dir: bool,
@@ -548,5 +543,8 @@ pub struct FlatNode {
     pub connector: String,
     pub stats: Option<(usize, usize)>,
     pub depth: usize,
+
     pub is_collapsed: bool,
+    #[serde(skip)]
+    pub icon_color: Option<ratatui::style::Color>,
 }

@@ -1,7 +1,7 @@
 
 # Makefile for git-twig
 
-.PHONY: bootstrap run test fmt lint check clean
+.PHONY: bootstrap run test fmt lint check clean serve-docs
 
 # Install git hooks
 bootstrap:
@@ -36,3 +36,7 @@ check:
 # Clean build artifacts
 clean:
 	cargo clean
+
+# Serve documentation locally
+serve-docs:
+	mkdocs serve

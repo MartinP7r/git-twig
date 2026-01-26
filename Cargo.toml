@@ -1,6 +1,6 @@
 [package]
 name = "git-twig"
-version = "1.2.0"
+version = "1.2.2"
 edition = "2021"
 license = "MIT"
 
@@ -19,10 +19,23 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 regex = "1.10"
 
+# cargo-dist configuration
 [workspace.metadata.dist]
-# The preferred name of your installer
-formula = "git-twig"
-# Target the user's homebrew-tap
+# CI backends
+cargo-dist-version = "0.19.1"
+ci = "github"
+# Build targets
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+]
+# Installers to generate
+installers = ["shell", "homebrew"]
+# Homebrew tap
 tap = "MartinP7r/tap"
-# Repository for releases
-repository = "https://github.com/MartinP7r/git-twig"
+# Formula name
+formula = "git-twig"
+# Enable GitHub Releases
+publish-jobs = ["homebrew"]
+

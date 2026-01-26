@@ -1181,6 +1181,7 @@ mod tests {
         let nodes = vec![
             FlatNode {
                 name: "foo.rs".into(),
+                icon: "".into(),
                 name_colored: "foo.rs".into(),
                 full_path: "src/foo.rs".into(),
                 is_dir: false,
@@ -1190,9 +1191,11 @@ mod tests {
                 stats: None,
                 depth: 0,
                 is_collapsed: false,
+                icon_color: None,
             },
             FlatNode {
                 name: "bar.rs".into(),
+                icon: "".into(),
                 name_colored: "bar.rs".into(),
                 full_path: "src/bar.rs".into(),
                 is_dir: false,
@@ -1202,6 +1205,7 @@ mod tests {
                 stats: None,
                 depth: 0,
                 is_collapsed: false,
+                icon_color: None,
             },
         ];
 

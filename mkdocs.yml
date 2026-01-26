@@ -41,9 +41,13 @@ markdown_extensions:
   - attr_list
   - md_in_html
 
+extra_css:
+  - stylesheets/landing.css
+
 nav:
+  - Home: index.md
   - Getting Started:
-    - Introduction: index.md
+    - Introduction: introduction.md
     - Quickstart: quickstart.md
   - Core Features:
     - Navigation: features/navigation.md

@@ -1,3 +1,5 @@
+use ratatui::style::Color;
+
 pub fn get_icon(name: &str, is_dir: bool) -> &'static str {
     if is_dir {
         return match name {
@@ -54,6 +56,50 @@ pub fn get_icon(name: &str, is_dir: bool) -> &'static str {
                 }
             } else {
                 ""
+            }
+        }
+    }
+}
+
+pub fn get_icon_color(name: &str, is_dir: bool) -> Option<Color> {
+    if is_dir {
+        return match name {
+            "src" | "scripts" | "tests" => Some(Color::Cyan),
+            "build" | "dist" | "target" => Some(Color::Yellow),
+            "docs" => Some(Color::Blue),
+            ".git" | ".github" => Some(Color::Gray),
+            _ => Some(Color::Blue),
+        };
+    }
+
+    match name {
+        "LICENSE" => Some(Color::Yellow),
+        "Makefile" | "Cargo.toml" | "package.json" => Some(Color::Red),
+        ".env" | ".gitignore" => Some(Color::DarkGray),
+        _ => {
+            if let Some(ext) = std::path::Path::new(name)
+                .extension()
+                .and_then(|s| s.to_str())
+            {
+                match ext {
+                    "rs" => Some(Color::Red),                                // Rust
+                    "js" | "ts" => Some(Color::Yellow),                      // JS/TS
+                    "py" => Some(Color::Blue),                               // Python
+                    "go" => Some(Color::Cyan),                               // Go
+                    "c" | "cpp" | "h" | "hpp" => Some(Color::Blue),          // C/C++
+                    "java" | "kt" => Some(Color::Red),                       // JVM
+                    "rb" => Some(Color::Red),                                // Ruby
+                    "md" => Some(Color::Blue),                               // Markdown
+                    "json" | "yaml" | "yml" | "toml" => Some(Color::Yellow), // Config
+                    "sh" => Some(Color::Green),                              // Shell
+                    "html" => Some(Color::Red),                              // HTML
+                    "css" => Some(Color::Blue),                              // CSS
+                    "lock" => Some(Color::Gray),
+                    "png" | "jpg" | "jpeg" | "gif" | "svg" => Some(Color::Magenta), // Images
+                    _ => Some(Color::White),
+                }
+            } else {
+                Some(Color::White)
             }
         }
     }
