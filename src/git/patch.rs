@@ -11,8 +11,6 @@ pub struct Hunk {
     pub display_end: usize,
 }
 
-
-
 pub fn parse_diff(diff_content: &str) -> (Vec<String>, Vec<Hunk>) {
     let mut headers = Vec::new();
     let mut hunks = Vec::new();
