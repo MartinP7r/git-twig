@@ -17,7 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install cargo-dist
-        run: curl --proto '=https' --tlsv1.2 -lsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
+        run: |
+          curl --proto '=https' --tlsv1.2 -lsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - id: plan
         run: |
           cargo dist plan --output-format=json > plan.json
@@ -32,7 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install cargo-dist
-        run: curl --proto '=https' --tlsv1.2 -lsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
+        run: |
+          curl --proto '=https' --tlsv1.2 -lsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Build with cargo-dist
         run: cargo dist build --tag=${{ github.ref_name }} --output-format=json > dist-manifest.json
       - name: Upload artifacts
@@ -48,7 +52,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install cargo-dist
-        run: curl --proto '=https' --tlsv1.2 -lsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
+        run: |
+          curl --proto '=https' --tlsv1.2 -lsSf https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-installer.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
