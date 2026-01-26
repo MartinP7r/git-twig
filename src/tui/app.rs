@@ -884,7 +884,7 @@ impl App {
     pub fn stage_hunk(&mut self) -> Result<()> {
         if let Some(i) = self.selected_hunk_idx {
             if let Some(hunk) = self.diff_hunks.get(i) {
-                let is_staged = if let Some(idx) = self.unified_state.selected() {
+                let _is_staged = if let Some(_idx) = self.unified_state.selected() {
                     // This is tricky: we need to know if the CURRENT file is staged or not
                     // But patch mode is generic.
                     // Generally, if we are in Diff view, we are diffing a specific file node.

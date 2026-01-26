@@ -4,6 +4,7 @@ use std::process::Command;
 
 #[derive(Debug, Clone)]
 pub struct Hunk {
+    #[allow(dead_code)]
     pub header: String,
     pub content: String,
     pub display_start: usize, // Line index in the full diff display
