@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.4] - 2026-01-27
+
+### Fixed
+- **Release CI**: Updated cargo-dist to v0.30.3 and fixed Homebrew tap configuration.
+
 ## [v1.2.3] - 2026-01-27
 
 ### Fixed
