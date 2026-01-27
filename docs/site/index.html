@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>git-twig | Visualize your Git Tree</title>
+    <!-- v1.1.0-deploy-fix -->
+    <meta name="description" content="A high-performance Rust tool to visualize your git status as a beautiful, hierarchical tree.">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="bg-mesh"></div>
+
+    <div class="container">
+        <nav>
+            <div class="logo">
+                <span>🌿</span> git-twig
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#install">Install</a>
+                <a href="https://github.com/MartinP7r/git-twig">GitHub</a>
+            </div>
+            <a href="#install" class="btn btn-primary">Try Now</a>
+        </nav>
+
+        <section class="hero">
+            <div class="hero-content">
+                <h1>Visualize your Git Status as a living tree.</h1>
+                <p>See your workspace changes with the clarity of nature and the precision of Rust. A high-performance CLI tool for modern developers.</p>
+                <div class="hero-actions">
+                    <div class="terminal" style="max-width: 500px; margin: 0 auto 2rem;">
+                        <div class="terminal-body" style="padding: 1rem;">
+                            <span class="t-green">$</span> cargo install git-twig
+                        </div>
+                    </div>
+                    <a href="#install" class="btn btn-primary">Get Started</a>
+                    <a href="https://github.com/MartinP7r/git-twig" class="btn btn-secondary" style="margin-left: 1rem;">View Source</a>
+                </div>
+            </div>
+
+            <div class="terminal-window floating">
+                <div class="terminal-titlebar">
+                    <div class="dot dot-red"></div>
+                    <div class="dot dot-yellow"></div>
+                    <div class="dot dot-green"></div>
+                </div>
+                <div class="terminal-screen">
+                    <div class="line"><span class="t-green">git-twig</span> <span class="t-gray">v1.0.0</span></div>
+                    <div class="line"></div>
+                    <div class="line">🌿 git-twig</div>
+                    <div class="line">├── <span class="t-yellow">(M)</span> src/ <span class="t-gray">[folder]</span></div>
+                    <div class="line">│   ├── <span class="t-green">main.rs</span> <span class="t-green"> [++++----]</span></div>
+                    <div class="line">│   └── <span class="t-yellow">(M)</span> node.rs <span class="t-green"> [++--]</span></div>
+                    <div class="line">├── <span class="t-blue">(?)</span> docs/ <span class="t-gray">[folder]</span></div>
+                    <div class="line">│   └── <span class="t-blue">(?)</span> roadmap.md</div>
+                    <div class="line">└── <span class="t-gray">(D)</span> deprecated.txt</div>
+                    <div class="line"></div>
+                    <div class="line"><span class="t-gray">4 files changed, 25 insertions(+), 12 deletions(-)</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="showcase" style="padding: 4rem 0;">
+            <div class="container">
+                <h2 style="text-align: center; margin-bottom: 2rem; font-size: 2.5rem;">Powerful by default. Simple by nature.</h2>
+                <div class="showcase-tabs" style="margin-bottom: 3rem;">
+                    <button class="tab-btn active" onclick="switchView(event, 'unified')">Unified Tree</button>
+                    <button class="tab-btn" onclick="switchView(event, 'split')">Split Pane</button>
+                    <button class="tab-btn" onclick="switchView(event, 'search')">Fuzzy Search</button>
+                </div>
+
+                <div class="terminal-window">
+                    <div class="terminal-titlebar">
+                        <div class="dot dot-red"></div>
+                        <div class="dot dot-yellow"></div>
+                        <div class="dot dot-green"></div>
+                    </div>
+                    <div class="terminal-screen">
+                        <div class="tui-header">
+                            <div id="tui-header-title">git-twig interactive | Filter: all</div>
+                            <div>v1.0.0</div>
+                        </div>
+
+                        <div class="tui-content-area">
+                            <!-- Unified View -->
+                            <div id="view-unified" class="tui-view active">
+                                <div class="tui-line">🌿 <span class="t-green">git-twig</span></div>
+                                <div class="tui-line">├── <span class="t-yellow">(M)</span> src/ <span class="t-gray">[folder]</span></div>
+                                <div class="tui-line">│   ├── <span class="t-cursor">main.rs</span> <span class="t-green"> | 8 ++++----</span></div>
+                                <div class="tui-line">│   └── <span class="t-yellow">(M)</span> node.rs <span class="t-green"> | 4 ++--</span></div>
+                                <div class="tui-line">├── <span class="t-blue">(?)</span> docs/ <span class="t-gray">[folder]</span></div>
+                                <div class="tui-line">│   └── <span class="t-blue">(?)</span> roadmap.md</div>
+                                <div class="tui-line">└── <span class="t-gray">(D)</span> deprecated.txt</div>
+                            </div>
+
+                            <!-- Split View -->
+                            <div id="view-split" class="tui-view">
+                                <div class="tui-pane active" style="margin-bottom: 10px;">
+                                    <div class="tui-block-title"> Staged Changes </div>
+                                    <div class="tui-line">>> <span class="t-green">[+]</span> src/main.rs <span class="t-green"> | 8 ++++----</span></div>
+                                </div>
+                                <div class="tui-pane">
+                                    <div class="tui-block-title"> Unstaged Changes </div>
+                                    <div class="tui-line">   <span class="t-yellow">(M)</span> src/node.rs <span class="t-green"> | 4 ++--</span></div>
+                                    <div class="tui-line">   <span class="t-blue">(?)</span> docs/roadmap.md</div>
+                                </div>
+                            </div>
+
+                            <!-- Search View -->
+                            <div id="view-search" class="tui-view">
+                                <div class="tui-line">🌿 <span class="t-green">git-twig</span></div>
+                                <div class="tui-line">├── <span class="t-yellow">(M)</span> src/</div>
+                                <div class="tui-line">│   └── <span class="t-yellow">(M)</span> <span class="t-cursor">node.rs</span> <span class="t-green"> | 4 ++--</span></div>
+                                <div class="tui-line">└── <span class="t-blue">(?)</span> docs/</div>
+                            </div>
+                        </div>
+
+                        <div class="tui-footer" id="footer-content">
+                            <span class="tui-key">[j/k]</span> Nav <span class="tui-key">[Space]</span> <span class="tui-val">Stage</span> <span class="tui-key">[v]</span> View <span class="tui-key">[/]</span> Search <span class="tui-key">[Enter]</span> Diff
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <script>
+            function switchView(event, view) {
+                // Update tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                event.currentTarget.classList.add('active');
+
+                // Update views
+                document.querySelectorAll('.tui-view').forEach(v => v.classList.remove('active'));
+                document.getElementById('view-' + view).classList.add('active');
+
+                // Update contents
+                const header = document.getElementById('tui-header-title');
+                const footer = document.getElementById('footer-content');
+
+                if (view === 'unified') {
+                    header.innerText = 'git-twig interactive | Filter: all';
+                    footer.innerHTML = '<span class="tui-key">[j/k]</span> Nav <span class="tui-key">[Space]</span> <span class="tui-val">Stage</span> <span class="tui-key">[v]</span> View <span class="tui-key">[/]</span> Search <span class="tui-key">[Enter]</span> Diff';
+                } else if (view === 'split') {
+                    header.innerText = 'git-twig interactive | Split Mode';
+                    footer.innerHTML = '<span class="tui-key">[Tab]</span> Switch Pane <span class="tui-key">[j/k]</span> Nav <span class="tui-key">[v]</span> View <span class="tui-key">[q]</span> Quit';
+                } else if (view === 'search') {
+                    header.innerText = 'git-twig interactive | Search';
+                    footer.innerHTML = '<span class="t-yellow">/</span><span class="tui-val">node</span><span class="tui-cursor"> </span>' + 
+                                     '<span style="margin-left: 20px;" class="t-gray">(matching 1 file)</span>';
+                }
+            }
+        </script>
+
+        <section id="features" class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🕹️</div>
+                <h3>Interactive TUI</h3>
+                <p>Full terminal interface with Vim-style navigation, fuzzy search, and interactive staging/unstaging.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌳</div>
+                <h3>Natural Tree</h3>
+                <p>See changes in a beautiful, nested directory structure instead of a confusing flat list.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Visual Themes</h3>
+                <p>Choose between ASCII, Unicode, or rich Nerd Font icons to match your terminal aesthetic.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Diff Alignment</h3>
+                <p>Clean, vertically aligned status indicators and diff bars make it easy to scan massive repositories.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">✏️</div>
+                <h3>Quick Edit</h3>
+                <p>Launch your favorite editor directly from the CLI or TUI to address changes instantly.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🦀</div>
+                <h3>Rust Speed</h3>
+                <p>Near-instant execution powered by Rust, ensuring a snappy experience even in the largest monorepos.</p>
+            </div>
+        </section>
+
+        <section id="install" style="padding: 4rem 0; text-align: center;">
+            <h2 style="font-size: 2.5rem; margin-bottom: 2rem;">Ready to grow?</h2>
+            <div class="terminal" style="max-width: 600px; margin: 0 auto;">
+                <div class="terminal-header">
+                    <span style="color: #666; font-size: 0.8rem;">Installation</span>
+                </div>
+                <div class="terminal-body">
+                    <div class="line"><span class="t-gray"># Install via Homebrew</span></div>
+                    <div class="line"><span class="t-green">$</span> brew tap MartinP7r/homebrew-tap</div>
+                    <div class="line"><span class="t-green">$</span> brew install git-twig</div>
+                    <div class="line"></div>
+                    <div class="line"><span class="t-gray"># Or via cargo</span></div>
+                    <div class="line"><span class="t-green">$</span> cargo install git-twig</div>
+                    <div class="line"></div>
+                    <div class="line"><span class="t-gray"># Start using it</span></div>
+                    <div class="line"><span class="t-green">$</span> git twig</div>
+                </div>
+            </div>
+        </section>
+
+        <footer style="padding: 4rem 0; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted);">
+            <p>&copy; 2026 git-twig contributors. Released under the MIT License.</p>
+            <p style="margin-top: 1rem;">Grown with 🦀 and 🌿</p>
+        </footer>
+    </div>
+</body>
+</html>

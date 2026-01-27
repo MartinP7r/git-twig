@@ -1,6 +1,8 @@
 site_name: Git-Twig
 site_description: High-performance git status visualizer
 site_author: MartinP7r
+site_url: https://martinp7r.github.io/git-twig/docs/
+site_dir: site/docs
 repo_url: https://github.com/MartinP7r/git-twig
 repo_name: MartinP7r/git-twig
 

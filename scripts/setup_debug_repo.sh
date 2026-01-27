@@ -26,6 +26,22 @@ echo "# Project" > README.md
 echo "public class Main {}" > src/main/java/com/example/Main.java
 echo "test=true" > config/app.ini
 touch src/lib/utils/helpers/StringUtil.php
+cat <<EOF > src/complex.js
+function calculateTotal(items) {
+  return items.reduce((acc, item) => acc + item.price, 0);
+}
+
+function validateUser(user) {
+  if (!user.name) return false;
+  if (!user.email) return false;
+  if (user.age < 18) return false;
+  return true;
+}
+
+function formatDate(date) {
+  return date.toISOString();
+}
+EOF
 touch docs/index.md
 # Prepare files for large diffs
 for i in {1..100}; do echo "line_$i" >> src/large_delete.txt; done
@@ -48,6 +64,27 @@ echo "secret" > deeply/nested/folder/structure/that/goes/on/forever/secret_key.p
 echo "<?php phpinfo(); ?>" > src/lib/utils/helpers/Debug.php
 echo "console.log('hello')" > plugins/custom/index.js
 echo "def main(): pass" > plugins/custom/script.py
+
+# MULTI-HUNK CHANGE (Complex JS)
+cat <<EOF > src/complex.js
+function calculateTotal(items) {
+  // Fixed bug: handle empty array
+  if (!items) return 0;
+  return items.reduce((acc, item) => acc + item.price, 0);
+}
+
+function validateUser(user) {
+  if (!user.name) return false;
+  if (!user.email) return false;
+  if (user.age < 18) return false;
+  return true;
+}
+
+function formatDate(date) {
+  // Use locale string instead
+  return date.toLocaleDateString();
+}
+EOF
 
 # DELETED
 rm src/main/java/com/example/Main.java
