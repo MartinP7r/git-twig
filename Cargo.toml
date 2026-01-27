@@ -1,8 +1,11 @@
 [package]
 name = "git-twig"
-version = "1.2.2"
+version = "1.2.3"
 edition = "2021"
 license = "MIT"
+repository = "https://github.com/MartinP7r/git-twig"
+description = "A high-performance, interactive git status visualizer"
+homepage = "https://martinp7r.github.io/git-twig/"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
@@ -22,8 +25,10 @@ regex = "1.10"
 # cargo-dist configuration
 [workspace.metadata.dist]
 # CI backends
-cargo-dist-version = "0.19.1"
+cargo-dist-version = "0.30.3"
 ci = "github"
+# Where to host releases
+hosting = ["github"]
 # Build targets
 targets = [
     "x86_64-unknown-linux-gnu",
@@ -33,9 +38,17 @@ targets = [
 # Installers to generate
 installers = ["shell", "homebrew"]
 # Homebrew tap
-tap = "MartinP7r/tap"
+tap = "MartinP7r/homebrew-tap"
 # Formula name
 formula = "git-twig"
 # Enable GitHub Releases
 publish-jobs = ["homebrew"]
+
+# Build profile for cargo-dist
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+
+
 

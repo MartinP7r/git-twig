@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.3] - 2026-01-27
+
+### Fixed
+- **Release CI**: Fixed cargo-dist configuration by adding `hosting` option.
+
 ## [v1.2.2] - 2026-01-27
 
 ### Added
