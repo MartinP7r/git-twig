@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.2.2] - 2026-01-27
+
+### Added
+- **Colored Icons**: File and directory icons now have distinct colors based on type in Nerd Font mode.
+- **Collapsible Branch Indicators**: Tree view now shows `[+]` and `[-]` indicators for directory expansion state.
+
+### Fixed
+- **Help Popup**: Removed unused `zz` binding from help menu.
+
 ## [v1.2.0] - 2026-01-24
 
 ### Added

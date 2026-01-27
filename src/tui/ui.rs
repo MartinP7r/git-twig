@@ -297,7 +297,6 @@ fn render_help_modal(f: &mut Frame, app: &mut App) {
         )]),
         Line::from("  gg    : Jump to top"),
         Line::from("  G     : Jump to bottom"),
-        Line::from("  zz    : Center cursor"),
         Line::from("  u/Ctrl+r : Undo / Redo stage"),
         Line::from("  Alt+V : Easter Egg tree view"),
         Line::from("  y     : Yank path to clipboard"),
@@ -574,16 +573,40 @@ fn render_list(
             } else {
                 Style::default().fg(theme.color_file)
             };
-            let name = Span::styled(&node.name, name_style);
+            let icon_style = if let Some(c) = node.icon_color {
+                Style::default().fg(c)
+            } else if node.is_dir {
+                Style::default().fg(theme.color_dir)
+            } else {
+                Style::default().fg(theme.color_file)
+            };
+
+            let icon_span = Span::styled(&node.icon, icon_style);
+
+            let mut name_str = node.name.clone();
+
+            if node.is_dir {
+                if node.is_collapsed {
+                    name_str.push_str(" [+]");
+                } else {
+                    name_str.push_str(" [-]");
+                }
+            }
+            let name_span = Span::styled(name_str, name_style);
 
             let mut spans = vec![
                 Span::raw(prefix),
                 status_indicator,
                 Span::raw(" "),
                 connector,
-                name,
+                icon_span,
+                name_span,
             ];
-            let width = node.connector.width() + node.name.width();
+            // Width calculation: we need to account for icon width now separated
+            let width = node.connector.width()
+                + node.icon.width()
+                + node.name.width()
+                + if node.is_dir { 4 } else { 0 };
             let padding_len = max_name_width.saturating_sub(width);
             let padding = " ".repeat(padding_len);
 

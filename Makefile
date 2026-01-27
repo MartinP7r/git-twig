@@ -1,7 +1,7 @@
 
 # Makefile for git-twig
 
-.PHONY: bootstrap run test fmt lint check clean
+.PHONY: bootstrap run test fmt lint check clean serve-docs serve-landing
 
 # Install git hooks
 bootstrap:
@@ -36,3 +36,11 @@ check:
 # Clean build artifacts
 clean:
 	cargo clean
+
+# Serve MkDocs documentation locally (at /docs/)
+serve-docs:
+	mkdocs serve
+
+# Serve landing page locally
+serve-landing:
+	python3 -m http.server 8080 --directory docs/site

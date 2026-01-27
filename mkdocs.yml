@@ -1,6 +1,8 @@
 site_name: Git-Twig
 site_description: High-performance git status visualizer
 site_author: MartinP7r
+site_url: https://martinp7r.github.io/git-twig/docs/
+site_dir: site/docs
 repo_url: https://github.com/MartinP7r/git-twig
 repo_name: MartinP7r/git-twig
 
@@ -41,9 +43,13 @@ markdown_extensions:
   - attr_list
   - md_in_html
 
+extra_css:
+  - stylesheets/landing.css
+
 nav:
+  - Home: index.md
   - Getting Started:
-    - Introduction: index.md
+    - Introduction: introduction.md
     - Quickstart: quickstart.md
   - Core Features:
     - Navigation: features/navigation.md
