@@ -16,11 +16,14 @@ pub struct Worktree {
     pub branch: String,
 }
 
+/// Diff stats type alias for convenience
+pub type DiffStats = HashMap<String, (usize, usize)>;
+
 pub fn build_tree_from_git(
     staged_only: bool,
     modified_only: bool,
     untracked_only: bool,
-) -> Result<Option<node::Node>> {
+) -> Result<(Option<node::Node>, DiffStats)> {
     // Run git status --porcelain -b -u
     let status_output = Command::new("git")
         .args(["status", "--porcelain", "-b", "-u"])
@@ -35,8 +38,13 @@ pub fn build_tree_from_git(
     let status_stdout = String::from_utf8_lossy(&status_output.stdout);
     let mut lines: Vec<String> = status_stdout.lines().map(|s| s.to_string()).collect();
 
+    // Collect diff stats (do this once, return to caller)
+    let mut stats = HashMap::new();
+    collect_diff_stats(&mut stats, &["diff", "--numstat"])?;
+    collect_diff_stats(&mut stats, &["diff", "--cached", "--numstat"])?;
+
     if lines.is_empty() {
-        return Ok(None);
+        return Ok((None, stats));
     }
 
     // Remove header (starts with ##)
@@ -44,19 +52,14 @@ pub fn build_tree_from_git(
         if first.starts_with("##") {
             lines.remove(0);
             if lines.is_empty() {
-                return Ok(None);
+                return Ok((None, stats));
             }
         }
     }
 
-    // Collect diff stats
-    let mut stats = HashMap::new();
-    collect_diff_stats(&mut stats, &["diff", "--numstat"])?;
-    collect_diff_stats(&mut stats, &["diff", "--cached", "--numstat"])?;
-
     let result_node =
         parser::build_tree(lines, &stats, staged_only, modified_only, untracked_only)?;
-    Ok(Some(result_node))
+    Ok((Some(result_node), stats))
 }
 
 pub fn get_status_header() -> Result<String> {

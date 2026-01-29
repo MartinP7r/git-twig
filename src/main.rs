@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::process::Command;
 
+mod cache;
 mod config;
 mod git;
 mod icons;
@@ -113,8 +114,8 @@ fn main() -> Result<()> {
 
     let result_node =
         match git::build_tree_from_git(args.staged_only, args.modified_only, args.untracked_only) {
-            Ok(Some(node)) => node,
-            Ok(None) => {
+            Ok((Some(node), _stats)) => node,
+            Ok((None, _stats)) => {
                 if !args.open && !args.json && !args.yaml {
                     if let Ok(header) = git::get_status_header() {
                         print_context_header(&header);

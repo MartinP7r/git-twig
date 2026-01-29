@@ -3,6 +3,7 @@ use ratatui::widgets::ListState;
 use std::collections::HashSet;
 use unicode_width::UnicodeWidthStr;
 
+use crate::cache::GitCache;
 use crate::config::KeyConfig;
 use crate::git::{self, Worktree};
 use crate::node::FlatNode;
@@ -120,6 +121,8 @@ pub struct App {
     pub diff_headers: Vec<String>,
     pub diff_hunks: Vec<crate::git::Hunk>,
     pub selected_hunk_idx: Option<usize>,
+    // Performance: centralized git data cache
+    pub cache: GitCache,
 }
 
 impl App {
@@ -169,6 +172,7 @@ impl App {
             diff_headers: Vec::new(),
             diff_hunks: Vec::new(),
             selected_hunk_idx: None,
+            cache: GitCache::new(),
         };
         app.refresh()?;
         Ok(app)
@@ -189,6 +193,9 @@ impl App {
     }
 
     pub fn refresh(&mut self) -> Result<()> {
+        // Track the last collected stats to avoid redundant git calls
+        let mut last_stats;
+
         match self.layout {
             AppLayout::Unified | AppLayout::EasterEgg => {
                 let (staged, modified) = match self.filter_mode {
@@ -197,7 +204,8 @@ impl App {
                     FilterMode::Staged => (true, false),
                 };
 
-                let tree = git::build_tree_from_git(staged, modified, false)?;
+                let (tree, stats) = git::build_tree_from_git(staged, modified, false)?;
+                last_stats = stats;
                 if let Some(root) = tree {
                     self.unified_nodes = root.flatten(
                         self.indent_size,
@@ -219,7 +227,7 @@ impl App {
                 Self::adjust_selection(&self.unified_nodes, &mut self.unified_state, true);
             }
             AppLayout::Split => {
-                let staged_tree = git::build_tree_from_git(true, false, false)?;
+                let (staged_tree, staged_stats) = git::build_tree_from_git(true, false, false)?;
                 if let Some(root) = staged_tree {
                     self.staged_nodes = root.flatten(
                         self.indent_size,
@@ -231,7 +239,14 @@ impl App {
                     self.staged_nodes = Vec::new();
                 }
 
-                let all_tree = git::build_tree_from_git(false, false, false)?;
+                let (all_tree, all_stats) = git::build_tree_from_git(false, false, false)?;
+                // Use the stats from the "all" tree which has both staged and unstaged
+                last_stats = all_stats;
+                // Merge in any stats from staged that might be missing (shouldn't be, but safe)
+                for (k, v) in staged_stats {
+                    last_stats.entry(k).or_insert(v);
+                }
+
                 if let Some(root) = all_tree {
                     let all = root.flatten(
                         self.indent_size,
@@ -272,7 +287,8 @@ impl App {
                 );
             }
             AppLayout::Compact => {
-                let tree = git::build_tree_from_git(false, false, false)?;
+                let (tree, stats) = git::build_tree_from_git(false, false, false)?;
+                last_stats = stats;
                 if let Some(root) = tree {
                     self.unified_nodes = root.flatten(
                         self.indent_size,
@@ -295,14 +311,10 @@ impl App {
             }
         }
 
-        // Collect global stats
-        let mut stats_map = std::collections::HashMap::new();
-        let _ = git::collect_diff_stats(&mut stats_map, &["diff", "--numstat"]);
-        let _ = git::collect_diff_stats(&mut stats_map, &["diff", "--cached", "--numstat"]);
-
+        // Use the already-collected stats (no redundant git calls!)
         let mut total_added = 0;
         let mut total_deleted = 0;
-        for (a, d) in stats_map.values() {
+        for (a, d) in last_stats.values() {
             total_added += a;
             total_deleted += d;
         }
@@ -621,6 +633,7 @@ impl App {
 
                 self.is_visual_mode = false;
                 self.visual_origin = None;
+                self.cache.invalidate();
                 self.refresh()?;
             }
         } else if let Some(i) = state.selected() {
@@ -635,6 +648,7 @@ impl App {
                 git::toggle_stage(&node.full_path, is_staged)?;
                 self.history
                     .push_action(vec![node.full_path.clone()], action);
+                self.cache.invalidate();
                 self.refresh()?;
             }
         }
@@ -647,6 +661,7 @@ impl App {
                 let to_unstage = entry.action == StageAction::Stage;
                 git::toggle_stage(&path, to_unstage)?;
             }
+            self.cache.invalidate();
             self.refresh()?;
         }
         Ok(())
@@ -658,6 +673,7 @@ impl App {
                 let to_unstage = entry.action == StageAction::Unstage;
                 git::toggle_stage(&path, to_unstage)?;
             }
+            self.cache.invalidate();
             self.refresh()?;
         }
         Ok(())
@@ -736,7 +752,7 @@ impl App {
     }
 
     pub fn collapse_all(&mut self) -> Result<()> {
-        let tree = git::build_tree_from_git(false, false, false)?;
+        let (tree, _stats) = git::build_tree_from_git(false, false, false)?;
         if let Some(root) = tree {
             root.get_all_dir_paths(&mut self.collapsed_paths);
             self.refresh()?;
