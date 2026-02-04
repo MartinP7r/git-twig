@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use ratatui::widgets::ListState;
 use std::collections::HashSet;
 use unicode_width::UnicodeWidthStr;
@@ -319,6 +319,72 @@ impl App {
             total_deleted += d;
         }
         self.global_stats = Some((total_added, total_deleted));
+
+        Ok(())
+    }
+
+    /// Light refresh: only update the status of a specific file
+    /// This is much faster than full refresh() for single-file stage/unstage operations
+    pub fn refresh_light(&mut self, changed_path: &str) -> Result<()> {
+        use std::process::Command;
+
+        // Get the current status of just this file
+        let output = Command::new("git")
+            .args(["status", "--porcelain", "--", changed_path])
+            .output()
+            .context("Failed to get file status")?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let new_status = stdout.lines().next().map(|line| {
+            if line.len() >= 2 {
+                let x = line.chars().next().unwrap_or(' ');
+                let y = line.chars().nth(1).unwrap_or(' ');
+                // Build status like "M+", "M", "A+", etc.
+                let mut s = String::new();
+                if x != ' ' && x != '?' {
+                    s.push(x);
+                    s.push('+'); // staged
+                }
+                if y != ' ' && y != '?' {
+                    if !s.is_empty() {
+                        s.push('/');
+                    }
+                    s.push(y);
+                }
+                if x == '?' && y == '?' {
+                    s = "?".to_string();
+                }
+                s
+            } else {
+                String::new()
+            }
+        });
+
+        // Update the node's status in all relevant lists
+        let update_node = |nodes: &mut Vec<FlatNode>, path: &str, status: &Option<String>| {
+            for node in nodes.iter_mut() {
+                if node.full_path == path {
+                    if let Some(ref s) = status {
+                        node.raw_status = s.clone();
+                    } else {
+                        // File is no longer modified - mark for removal
+                        node.raw_status = String::new();
+                    }
+                    break;
+                }
+            }
+        };
+
+        update_node(&mut self.unified_nodes, changed_path, &new_status);
+        update_node(&mut self.staged_nodes, changed_path, &new_status);
+        update_node(&mut self.unstaged_nodes, changed_path, &new_status);
+
+        // Remove nodes with empty status (file is now clean)
+        if new_status.is_none() || new_status.as_ref().is_some_and(|s| s.is_empty()) {
+            self.unified_nodes.retain(|n| n.full_path != changed_path);
+            self.staged_nodes.retain(|n| n.full_path != changed_path);
+            self.unstaged_nodes.retain(|n| n.full_path != changed_path);
+        }
 
         Ok(())
     }
@@ -645,11 +711,12 @@ impl App {
                     StageAction::Stage
                 };
 
-                git::toggle_stage(&node.full_path, is_staged)?;
-                self.history
-                    .push_action(vec![node.full_path.clone()], action);
+                let path = node.full_path.clone();
+                git::toggle_stage(&path, is_staged)?;
+                self.history.push_action(vec![path.clone()], action);
                 self.cache.invalidate();
-                self.refresh()?;
+                // Use light refresh for single file - much faster!
+                self.refresh_light(&path)?;
             }
         }
         Ok(())
@@ -1156,6 +1223,11 @@ impl App {
     }
 }
 
+fn strip_ansi_codes(s: &str) -> String {
+    let re = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
+    re.replace_all(s, "").to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1235,9 +1307,4 @@ mod tests {
         let filtered_none = App::filter_nodes(&nodes, "baz");
         assert_eq!(filtered_none.len(), 0);
     }
-}
-
-fn strip_ansi_codes(s: &str) -> String {
-    let re = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
-    re.replace_all(s, "").to_string()
 }

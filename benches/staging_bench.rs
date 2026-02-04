@@ -49,7 +49,8 @@ fn create_test_repo(file_count: usize) -> TempDir {
     // Modify half the files
     for i in 0..(file_count / 2) {
         let file_path = path.join(format!("file_{}.txt", i));
-        std::fs::write(&file_path, format!("modified content {}", i)).expect("Failed to modify file");
+        std::fs::write(&file_path, format!("modified content {}", i))
+            .expect("Failed to modify file");
     }
 
     temp_dir
@@ -129,5 +130,10 @@ fn bench_stage_single_file(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_git_status, bench_git_diff_numstat, bench_stage_single_file);
+criterion_group!(
+    benches,
+    bench_git_status,
+    bench_git_diff_numstat,
+    bench_stage_single_file
+);
 criterion_main!(benches);
