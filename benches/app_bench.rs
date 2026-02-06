@@ -62,15 +62,11 @@ fn bench_tree_flatten(c: &mut Criterion) {
         let tree = create_test_tree(*depth, *breadth);
         let node_count = count_nodes(&tree);
 
-        group.bench_with_input(
-            BenchmarkId::new("nodes", node_count),
-            &tree,
-            |b, tree| {
-                b.iter(|| {
-                    black_box(tree.flatten(2, false, &theme, &collapsed_paths));
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("nodes", node_count), &tree, |b, tree| {
+            b.iter(|| {
+                black_box(tree.flatten(2, false, &theme, &collapsed_paths));
+            });
+        });
     }
 
     group.finish();
@@ -80,9 +76,7 @@ fn bench_tree_flatten(c: &mut Criterion) {
 fn count_nodes(node: &Node) -> usize {
     match &node.node_type {
         NodeType::File { .. } => 1,
-        NodeType::Directory { children } => {
-            1 + children.iter().map(count_nodes).sum::<usize>()
-        }
+        NodeType::Directory { children } => 1 + children.iter().map(count_nodes).sum::<usize>(),
     }
 }
 
