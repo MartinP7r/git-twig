@@ -6,7 +6,7 @@ use crossterm::{
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
-mod app;
+pub mod app;
 mod event;
 mod history;
 mod ui;
