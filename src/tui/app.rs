@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use ratatui::widgets::ListState;
 use std::collections::HashSet;
+use std::sync::LazyLock;
 use unicode_width::UnicodeWidthStr;
 
 use crate::cache::GitCache;
@@ -123,6 +124,8 @@ pub struct App {
     pub selected_hunk_idx: Option<usize>,
     // Performance: centralized git data cache
     pub cache: GitCache,
+    // Status message (errors, confirmations)
+    pub status_message: Option<String>,
 }
 
 impl App {
@@ -173,6 +176,7 @@ impl App {
             diff_hunks: Vec::new(),
             selected_hunk_idx: None,
             cache: GitCache::new(),
+            status_message: None,
         };
         app.refresh()?;
         Ok(app)
@@ -194,7 +198,7 @@ impl App {
 
     pub fn refresh(&mut self) -> Result<()> {
         // Track the last collected stats to avoid redundant git calls
-        let mut last_stats;
+        let last_stats;
 
         match self.layout {
             AppLayout::Unified | AppLayout::EasterEgg => {
@@ -227,25 +231,9 @@ impl App {
                 Self::adjust_selection(&self.unified_nodes, &mut self.unified_state, true);
             }
             AppLayout::Split => {
-                let (staged_tree, staged_stats) = git::build_tree_from_git(true, false, false)?;
-                if let Some(root) = staged_tree {
-                    self.staged_nodes = root.flatten(
-                        self.indent_size,
-                        self.collapse,
-                        &self.theme,
-                        &self.collapsed_paths,
-                    );
-                } else {
-                    self.staged_nodes = Vec::new();
-                }
-
+                // Single git call - filter results for staged/unstaged
                 let (all_tree, all_stats) = git::build_tree_from_git(false, false, false)?;
-                // Use the stats from the "all" tree which has both staged and unstaged
                 last_stats = all_stats;
-                // Merge in any stats from staged that might be missing (shouldn't be, but safe)
-                for (k, v) in staged_stats {
-                    last_stats.entry(k).or_insert(v);
-                }
 
                 if let Some(root) = all_tree {
                     let all = root.flatten(
@@ -254,11 +242,18 @@ impl App {
                         &self.theme,
                         &self.collapsed_paths,
                     );
+                    // Split into staged (ends with '+') and unstaged
+                    self.staged_nodes = all
+                        .iter()
+                        .filter(|n| n.raw_status.ends_with('+'))
+                        .cloned()
+                        .collect();
                     self.unstaged_nodes = all
                         .into_iter()
                         .filter(|n| !n.raw_status.ends_with('+'))
                         .collect();
                 } else {
+                    self.staged_nodes = Vec::new();
                     self.unstaged_nodes = Vec::new();
                 }
 
@@ -914,6 +909,14 @@ impl App {
         Ok(())
     }
 
+    pub fn set_error(&mut self, message: String) {
+        self.status_message = Some(message);
+    }
+
+    pub fn clear_status(&mut self) {
+        self.status_message = None;
+    }
+
     pub fn toggle_patch_mode(&mut self) {
         if self.view_mode != ViewMode::Diff {
             return;
@@ -967,43 +970,13 @@ impl App {
     pub fn stage_hunk(&mut self) -> Result<()> {
         if let Some(i) = self.selected_hunk_idx {
             if let Some(hunk) = self.diff_hunks.get(i) {
-                let _is_staged = if let Some(_idx) = self.unified_state.selected() {
-                    // This is tricky: we need to know if the CURRENT file is staged or not
-                    // But patch mode is generic.
-                    // Generally, if we are in Diff view, we are diffing a specific file node.
-                    // And we know the status of that node.
-                    // We should pass 'stage' boolean direction.
-                    // However, git apply --cached applies TO the index (staging it).
-                    // git apply --reverse --cached would UNSTAGE it.
-                    // We need to know if we are 'Adding' or 'Resetting'.
-                    // Let's rely on the raw_status of the selected node.
-                    false // FIXME: Logic needed below
-                } else {
-                    false
-                };
-
-                // For now, let's assume this is mostly for STAGING (add -p).
-                // But unstage -p is also valid.
-                // We need to look up the node again.
-                // This is slightly inefficient but safe.
-
                 let node = self.get_selected_node();
                 if let Some(n) = node {
                     let is_staged = n.raw_status.contains('+');
                     if is_staged {
-                        // Unstage: git apply --cached --reverse
-                        // Not implemented in helper yet, but we can just use `git restore --patch`?
-                        // Or update apply_patch to support reverse.
-                        // Let's update apply_patch first.
-                        // For now, let's just support Staging (add -p equivalent).
-                        // If user tries to stage checks on a staged file, it does nothing or errors.
-
-                        // Actually, apply_patch takes 'headers'.
-                        // If we are unstaging, we might need --reverse.
-                        // Let's start with just handling Staging for v1.3.0 scope if complex.
-                        // roadmap says "Interactive Patch Staging".
-
-                        git::patch::apply_patch(&self.diff_headers, hunk, true)?;
+                        // Unstage: would need `git apply --cached --reverse`
+                        // Not implemented yet - skip for staged files
+                        return Ok(());
                     } else {
                         // Stage: git apply --cached
                         git::patch::apply_patch(&self.diff_headers, hunk, true)?;
@@ -1223,9 +1196,11 @@ impl App {
     }
 }
 
+static ANSI_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap());
+
 fn strip_ansi_codes(s: &str) -> String {
-    let re = regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap();
-    re.replace_all(s, "").to_string()
+    ANSI_RE.replace_all(s, "").to_string()
 }
 
 #[cfg(test)]
