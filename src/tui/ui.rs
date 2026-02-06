@@ -450,6 +450,12 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
                 area.y + 1,
             );
         }
+    } else if let Some(ref error) = app.status_message {
+        // Show error/status message
+        let p = Paragraph::new(error.as_str())
+            .style(Style::default().fg(Color::Red))
+            .block(Block::default().borders(Borders::ALL).title(" Error "));
+        f.render_widget(p, area);
     } else {
         let (added, deleted) = app.global_stats.unwrap_or((0, 0));
         let total = added + deleted;

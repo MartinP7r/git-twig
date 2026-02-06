@@ -12,6 +12,9 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
 
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
+                // Clear any previous status/error message on new input
+                app.clear_status();
+
                 if app.show_commit_dialog {
                     match key.code {
                         KeyCode::Char(c) => {
@@ -25,8 +28,7 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                         }
                         KeyCode::Enter => {
                             if let Err(e) = app.confirm_commit() {
-                                // TODO: Show error
-                                eprintln!("Error committing: {}", e);
+                                app.set_error(format!("Commit failed: {}", e));
                             }
                         }
                         _ => {}
