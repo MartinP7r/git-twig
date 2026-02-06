@@ -29,6 +29,10 @@ tempfile = "3.10"
 name = "staging_bench"
 harness = false
 
+[[bench]]
+name = "app_bench"
+harness = false
+
 # cargo-dist configuration
 [workspace.metadata.dist]
 # CI backends

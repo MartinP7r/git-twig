@@ -1199,7 +1199,8 @@ impl App {
 static ANSI_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\x1B\[[0-9;]*[mK]").unwrap());
 
-fn strip_ansi_codes(s: &str) -> String {
+/// Strip ANSI escape codes from a string
+pub fn strip_ansi_codes(s: &str) -> String {
     ANSI_RE.replace_all(s, "").to_string()
 }
 
