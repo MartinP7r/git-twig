@@ -357,7 +357,10 @@ impl App {
 
         // Update the node's status in all relevant lists
         let theme = self.theme.clone();
-        let update_node = |nodes: &mut Vec<FlatNode>, path: &str, status: &Option<String>, theme: &crate::theme::Theme| {
+        let update_node = |nodes: &mut Vec<FlatNode>,
+                           path: &str,
+                           status: &Option<String>,
+                           theme: &crate::theme::Theme| {
             for node in nodes.iter_mut() {
                 if node.full_path == path {
                     if let Some(ref s) = status {
@@ -731,21 +734,44 @@ impl App {
         } else if let Some(i) = state.selected() {
             if let Some(node) = filtered.get(i) {
                 if node.is_dir {
-                    return Ok(());
-                }
-                let is_staged = node.raw_status.contains('+');
-                let action = if is_staged {
-                    StageAction::Unstage
-                } else {
-                    StageAction::Stage
-                };
+                    // Toggle all child files under this directory
+                    let dir_path = node.full_path.clone();
+                    let is_staged = node.raw_status.contains('+');
+                    let action = if is_staged {
+                        StageAction::Unstage
+                    } else {
+                        StageAction::Stage
+                    };
 
-                let path = node.full_path.clone();
-                git::toggle_stage(&path, is_staged)?;
-                self.history.push_action(vec![path.clone()], action);
-                self.cache.invalidate();
-                // Use light refresh for single file - much faster!
-                self.refresh_light(&path)?;
+                    let child_paths: Vec<String> = filtered
+                        .iter()
+                        .filter(|n| !n.is_dir && n.full_path.starts_with(&format!("{}/", dir_path)))
+                        .map(|n| n.full_path.clone())
+                        .collect();
+
+                    if !child_paths.is_empty() {
+                        for path in &child_paths {
+                            git::toggle_stage(path, is_staged)?;
+                        }
+                        self.history.push_action(child_paths, action);
+                        self.cache.invalidate();
+                        self.refresh()?;
+                    }
+                } else {
+                    let is_staged = node.raw_status.contains('+');
+                    let action = if is_staged {
+                        StageAction::Unstage
+                    } else {
+                        StageAction::Stage
+                    };
+
+                    let path = node.full_path.clone();
+                    git::toggle_stage(&path, is_staged)?;
+                    self.history.push_action(vec![path.clone()], action);
+                    self.cache.invalidate();
+                    // Use light refresh for single file - much faster!
+                    self.refresh_light(&path)?;
+                }
             }
         }
         Ok(())
@@ -1316,5 +1342,157 @@ mod tests {
 
         let filtered_none = App::filter_nodes(&nodes, "baz");
         assert_eq!(filtered_none.len(), 0);
+    }
+
+    fn make_file_node(name: &str, path: &str, raw_status: &str) -> FlatNode {
+        let status = if raw_status.contains('+') {
+            '+'
+        } else if raw_status.contains('?') {
+            '?'
+        } else {
+            'M'
+        };
+        FlatNode {
+            name: format!("{} ({})", name, raw_status),
+            icon: "".into(),
+            name_colored: format!("{} ({})", name, raw_status),
+            full_path: path.into(),
+            is_dir: false,
+            status,
+            raw_status: raw_status.into(),
+            connector: "".into(),
+            stats: None,
+            depth: 1,
+            is_collapsed: false,
+            icon_color: None,
+        }
+    }
+
+    fn make_dir_node(name: &str, path: &str, raw_status: &str) -> FlatNode {
+        FlatNode {
+            name: name.into(),
+            icon: "".into(),
+            name_colored: name.into(),
+            full_path: path.into(),
+            is_dir: true,
+            status: ' ',
+            raw_status: raw_status.into(),
+            connector: "".into(),
+            stats: None,
+            depth: 0,
+            is_collapsed: false,
+            icon_color: None,
+        }
+    }
+
+    #[test]
+    fn test_refresh_light_updates_display_fields() {
+        // Simulate what refresh_light does to node fields
+        let mut node = make_file_node("app.ini", "config/app.ini", "M");
+        assert_eq!(node.name, "app.ini (M)");
+        assert_eq!(node.status, 'M');
+        assert!(!node.raw_status.contains('+'));
+
+        // Simulate staging: update fields as refresh_light does
+        let new_status = "M+".to_string();
+        node.raw_status = new_status.clone();
+        node.status = if new_status.contains('+') {
+            '+'
+        } else if new_status.contains('?') {
+            '?'
+        } else {
+            'M'
+        };
+        let base_name = if let Some(pos) = node.name.rfind(" (") {
+            node.name[..pos].to_string()
+        } else {
+            node.name.clone()
+        };
+        node.name = format!("{} ({})", base_name, new_status);
+
+        assert_eq!(node.name, "app.ini (M+)");
+        assert_eq!(node.status, '+');
+        assert_eq!(node.raw_status, "M+");
+
+        // Simulate unstaging back
+        let unstaged_status = "M".to_string();
+        node.raw_status = unstaged_status.clone();
+        node.status = 'M';
+        let base_name = if let Some(pos) = node.name.rfind(" (") {
+            node.name[..pos].to_string()
+        } else {
+            node.name.clone()
+        };
+        node.name = format!("{} ({})", base_name, unstaged_status);
+
+        assert_eq!(node.name, "app.ini (M)");
+        assert_eq!(node.status, 'M');
+    }
+
+    #[test]
+    fn test_folder_toggle_collects_child_paths() {
+        let nodes = vec![
+            make_dir_node("src", "src", "M"),
+            make_file_node("main.rs", "src/main.rs", "M"),
+            make_file_node("lib.rs", "src/lib.rs", "M"),
+            make_dir_node("tests", "tests", "M+"),
+            make_file_node("test.rs", "tests/test.rs", "M+"),
+            make_file_node("README.md", "README.md", "M"),
+        ];
+
+        let dir_path = "src";
+        let child_paths: Vec<String> = nodes
+            .iter()
+            .filter(|n| !n.is_dir && n.full_path.starts_with(&format!("{}/", dir_path)))
+            .map(|n| n.full_path.clone())
+            .collect();
+
+        assert_eq!(child_paths.len(), 2);
+        assert!(child_paths.contains(&"src/main.rs".to_string()));
+        assert!(child_paths.contains(&"src/lib.rs".to_string()));
+        // Should not include files from other dirs
+        assert!(!child_paths.contains(&"tests/test.rs".to_string()));
+        assert!(!child_paths.contains(&"README.md".to_string()));
+    }
+
+    #[test]
+    fn test_folder_toggle_nested_dirs() {
+        let nodes = vec![
+            make_dir_node("deep", "deep", "M"),
+            make_dir_node("nested", "deep/nested", "M"),
+            make_file_node("file.txt", "deep/nested/file.txt", "M"),
+            make_file_node("other.txt", "deep/other.txt", "M"),
+        ];
+
+        let dir_path = "deep";
+        let child_paths: Vec<String> = nodes
+            .iter()
+            .filter(|n| !n.is_dir && n.full_path.starts_with(&format!("{}/", dir_path)))
+            .map(|n| n.full_path.clone())
+            .collect();
+
+        // Should include files from nested subdirectories
+        assert_eq!(child_paths.len(), 2);
+        assert!(child_paths.contains(&"deep/nested/file.txt".to_string()));
+        assert!(child_paths.contains(&"deep/other.txt".to_string()));
+    }
+
+    #[test]
+    fn test_status_char_from_raw_status() {
+        // Verify status char derivation matches what refresh_light produces
+        let staged = make_file_node("f", "f", "M+");
+        assert_eq!(staged.status, '+');
+
+        let unstaged = make_file_node("f", "f", "M");
+        assert_eq!(unstaged.status, 'M');
+
+        let untracked = make_file_node("f", "f", "?");
+        assert_eq!(untracked.status, '?');
+
+        let added_staged = make_file_node("f", "f", "A+");
+        assert_eq!(added_staged.status, '+');
+
+        let deleted = make_file_node("f", "f", "D");
+        assert_eq!(deleted.status, 'M');
     }
 }
