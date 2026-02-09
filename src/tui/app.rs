@@ -217,6 +217,8 @@ impl App {
                         &self.theme,
                         &self.collapsed_paths,
                     );
+                    self.unified_nodes
+                        .retain(|n| !(n.is_dir && n.full_path == "."));
                 } else {
                     self.unified_nodes = Vec::new();
                 }
@@ -236,12 +238,13 @@ impl App {
                 last_stats = all_stats;
 
                 if let Some(root) = all_tree {
-                    let all = root.flatten(
+                    let mut all = root.flatten(
                         self.indent_size,
                         self.collapse,
                         &self.theme,
                         &self.collapsed_paths,
                     );
+                    all.retain(|n| !(n.is_dir && n.full_path == "."));
                     // Split into staged (ends with '+') and unstaged
                     self.staged_nodes = all
                         .iter()
@@ -291,6 +294,8 @@ impl App {
                         &self.theme,
                         &self.collapsed_paths,
                     );
+                    self.unified_nodes
+                        .retain(|n| !(n.is_dir && n.full_path == "."));
                 } else {
                     self.unified_nodes = Vec::new();
                 }
