@@ -54,6 +54,7 @@ Focus: Completing the local development loop.
 ---
 
 ## Future Ideas / Backlog 📒
+- [ ] **Version Flag (`-v`)**: Display version information from command line.
 - [ ] **Log Tree**: A visual representation of the git log with branch forks.
 - [ ] **Diff Config**: Support for external diff tools (difftastic, delta).
 - [ ] **Performance++**: Parallel git status calls for massive repositories.

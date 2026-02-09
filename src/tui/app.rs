@@ -356,11 +356,42 @@ impl App {
         });
 
         // Update the node's status in all relevant lists
-        let update_node = |nodes: &mut Vec<FlatNode>, path: &str, status: &Option<String>| {
+        let theme = self.theme.clone();
+        let update_node = |nodes: &mut Vec<FlatNode>, path: &str, status: &Option<String>, theme: &crate::theme::Theme| {
             for node in nodes.iter_mut() {
                 if node.full_path == path {
                     if let Some(ref s) = status {
                         node.raw_status = s.clone();
+                        // Update status char used by the UI indicator [+]/[M]/[?]
+                        node.status = if s.contains('+') {
+                            '+'
+                        } else if s.contains('?') {
+                            '?'
+                        } else {
+                            'M'
+                        };
+                        // Update the display name (e.g. "app.ini (M)" -> "app.ini (M+)")
+                        // Extract the base filename (everything before the last " (")
+                        let base_name = if let Some(pos) = node.name.rfind(" (") {
+                            node.name[..pos].to_string()
+                        } else {
+                            node.name.clone()
+                        };
+                        node.name = format!("{} ({})", base_name, s);
+
+                        // Update colored name
+                        let staged = s.contains('+');
+                        let icon = if theme.is_nerd && !theme.simple_icons {
+                            format!("{} ", crate::icons::get_icon(&base_name, false))
+                        } else {
+                            theme.icon_file.to_string()
+                        };
+                        let colored_name = if staged {
+                            format!("{}{}", icon, colored::Colorize::green(base_name.as_str()))
+                        } else {
+                            format!("{}{}", icon, colored::Colorize::red(base_name.as_str()))
+                        };
+                        node.name_colored = format!("{} ({})", colored_name, s);
                     } else {
                         // File is no longer modified - mark for removal
                         node.raw_status = String::new();
@@ -370,9 +401,9 @@ impl App {
             }
         };
 
-        update_node(&mut self.unified_nodes, changed_path, &new_status);
-        update_node(&mut self.staged_nodes, changed_path, &new_status);
-        update_node(&mut self.unstaged_nodes, changed_path, &new_status);
+        update_node(&mut self.unified_nodes, changed_path, &new_status, &theme);
+        update_node(&mut self.staged_nodes, changed_path, &new_status, &theme);
+        update_node(&mut self.unstaged_nodes, changed_path, &new_status, &theme);
 
         // Remove nodes with empty status (file is now clean)
         if new_status.is_none() || new_status.as_ref().is_some_and(|s| s.is_empty()) {
@@ -699,6 +730,9 @@ impl App {
             }
         } else if let Some(i) = state.selected() {
             if let Some(node) = filtered.get(i) {
+                if node.is_dir {
+                    return Ok(());
+                }
                 let is_staged = node.raw_status.contains('+');
                 let action = if is_staged {
                     StageAction::Unstage
