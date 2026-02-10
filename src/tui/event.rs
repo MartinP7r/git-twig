@@ -205,7 +205,9 @@ pub fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App)
                                     Action::NextFile => app.next_file(),
                                     Action::PrevFile => app.previous_file(),
                                     Action::Stage => {
-                                        let _ = app.toggle_stage();
+                                        if let Err(e) = app.toggle_stage() {
+                                            app.set_error(format!("Stage failed: {}", e));
+                                        }
                                     }
                                     Action::Filter => {
                                         if app.layout == AppLayout::Unified {

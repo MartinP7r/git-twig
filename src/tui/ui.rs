@@ -459,10 +459,11 @@ fn render_bottom_bar(f: &mut Frame, app: &App, area: Rect) {
     } else {
         let (added, deleted) = app.global_stats.unwrap_or((0, 0));
         let total = added + deleted;
-        let mut stats_spans = vec![Span::raw(format!(
-            " {} files changed ",
-            app.staged_nodes.len() + app.unstaged_nodes.len()
-        ))];
+        let file_count = match app.layout {
+            AppLayout::Split => app.staged_nodes.len() + app.unstaged_nodes.len(),
+            _ => app.unified_nodes.iter().filter(|n| !n.is_dir).count(),
+        };
+        let mut stats_spans = vec![Span::raw(format!(" {} files changed ", file_count))];
 
         if total > 0 {
             stats_spans.push(Span::raw("| "));
